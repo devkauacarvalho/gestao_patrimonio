@@ -13,10 +13,44 @@
       }
       @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-      /* Adicione este bloco CSS para impressão */
+      /* Bloco CSS para impressão */
       @media print {
+        /* Oculta tudo no corpo da página que não seja o contêiner do modal de impressão */
+        body > *:not(.print-modal-container) {
+          display: none !important;
+        }
+
+        /* Torna o contêiner do modal de impressão visível e o posiciona para a impressão */
+        .print-modal-container {
+          position: fixed !important; /* Garante que o modal cubra a página */
+          top: 0 !important;
+          left: 0 !important;
+          right: 0 !important;
+          bottom: 0 !important;
+          width: 100% !important;
+          height: 100% !important;
+          background-color: white !important; /* Define fundo branco para impressão */
+          display: flex !important; /* Mantém o layout flex para centralização */
+          align-items: center !important;
+          justify-content: center !important;
+          z-index: 9999 !important; /* Garante que ele fique acima de tudo */
+          padding: 20px !important; /* Adiciona um padding para margens na impressão */
+        }
+        
+        /* Ajusta o conteúdo interno do modal para se adaptar à página impressa */
+        .print-modal-container > div {
+            width: auto !important; /* Largura automática */
+            max-width: 90% !important; /* Limita a largura máxima */
+            height: auto !important; /* Altura automática */
+            max-height: 90% !important; /* Limita a altura máxima */
+            overflow: visible !important; /* Garante que o conteúdo não seja cortado */
+            box-shadow: none !important; /* Remove sombras para impressão limpa */
+            border-radius: 0 !important; /* Remove bordas arredondadas */
+        }
+
+        /* Oculta elementos com a classe hide-on-print durante a impressão */
         .hide-on-print {
-          display: none !important; /* Oculta o elemento durante a impressão */
+          display: none !important;
         }
       }
     </style>

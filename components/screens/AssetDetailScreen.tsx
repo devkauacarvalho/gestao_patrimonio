@@ -1,8 +1,9 @@
+// components/screens/AssetDetailScreen.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Asset, HistoryEntry, AssetStatus } from '../../types';
+import { Asset, HistoryEntry, AssetStatus, HistoryEventType } from '../../types';
 import { ACCENT_COLOR_CLASS_TEXT } from '../../constants';
-import { IconBack, IconEdit, IconAdd, IconTime, IconSave, IconCancel, IconQrCode } from '../../constants.tsx'; // Importar IconQrCode
+import { IconBack, IconEdit, IconAdd, IconTime, IconSave, IconCancel, IconQrCode, IconDelete } from '../../constants.tsx';
 import Button from '../ui/Button';
 import Modal from '../ui/Modal';
 import AssetForm from '../features/AssetForm';
@@ -11,26 +12,30 @@ import Card from '../ui/Card';
 import Input from '../ui/Input';
 import Select from '../ui/Select';
 import Textarea from '../ui/Textarea';
-import QRCodeGenerator from '../features/QRCodeGenerator'; // Importar o novo componente
+import QRCodeGenerator from '../features/QRCodeGenerator';
+import { ASSET_STATUS_OPTIONS } from '../../constants'; // Importar ASSET_STATUS_OPTIONS
 
-// Define props for viewing/editing an existing asset
+// Definição das props para visualização/edição de um ativo existente
 interface ViewEditAssetProps {
   mode?: 'view' | 'updateAsset';
   onUpdateAsset: (updatedAsset: Omit<Asset, 'historico' | 'ultima_atualizacao'>) => Promise<boolean>;
   onAddHistoryEntry: (assetId: string, entry: Omit<HistoryEntry, 'id' | 'timestamp' | 'asset_id'>) => Promise<boolean>;
-  assetId?: string;
-  onAddAsset?: never;
+  onDeleteAsset: (assetId: string) => Promise<boolean>;
+  assetId?: string; // assetId é obtido via useParams, não passado como prop diretamente do App.tsx para este modo
+  onAddAsset?: never; // Não aplicável para visualização/edição
 }
 
-// Define props for adding a new asset
+// Definição das props para adicionar um novo ativo
 interface AddNewAssetProps {
   mode: 'addAsset';
-  onAddAsset: (newAsset: Omit<Asset, 'historico' | 'ultima_atualizacao'>) => Promise<boolean>;
-  onUpdateAsset?: (updatedAsset: Omit<Asset, 'historico' | 'ultima_atualizacao'>) => Promise<boolean>;
-  onAddHistoryEntry?: (assetId: string, entry: Omit<HistoryEntry, 'id' | 'timestamp' | 'asset_id'>) => Promise<boolean>;
-  assetId?: never;
+  onAddAsset: (newAsset: Omit<Asset, 'historico' | 'ultima_atualizacao' | 'id' | 'id_interno' | 'atualizado_por'>) => Promise<boolean>;
+  onUpdateAsset?: (updatedAsset: Omit<Asset, 'historico' | 'ultima_atualizacao'>) => Promise<boolean>; // Mantido para compatibilidade de tipo no union
+  onAddHistoryEntry?: (assetId: string, entry: Omit<HistoryEntry, 'id' | 'timestamp' | 'asset_id'>) => Promise<boolean>; // Mantido para compatibilidade de tipo no union
+  onDeleteAsset?: never; // Não aplicável para adição de ativo
+  assetId?: never; // Não aplicável para adição de ativo
 }
 
+// Tipo de props unificado para AssetDetailScreen
 type AssetDetailScreenProps = (ViewEditAssetProps | AddNewAssetProps) & {
   apiBaseUrl: string;
 };
@@ -40,13 +45,15 @@ const getStatusPillClasses = (status: AssetStatus | string) => {
     case AssetStatus.EmOperacao: return `bg-green-100 text-green-700 border-green-300`;
     case AssetStatus.EmManutencao: return `bg-yellow-100 text-yellow-700 border-yellow-300`;
     case AssetStatus.AguardandoPecas: return `bg-orange-100 text-orange-700 border-orange-300`;
-    case AssetStatus.ForaDeUso: return `bg-red-100 text-red-700 border-red-300`;
+    case AssetStatus.ForaDeUso: return `bg-red-100 text-red-800 border-red-300`; // alterado para red-800 para combinar com outros
     default: return `bg-slate-100 text-slate-700 border-slate-300`;
   }
 };
 
 const AssetDetailScreen: React.FC<AssetDetailScreenProps> = (props) => {
   const { onUpdateAsset, onAddHistoryEntry, onAddAsset, apiBaseUrl } = props;
+  const onDeleteAsset = (props as ViewEditAssetProps).onDeleteAsset;
+
   const { assetId: paramAssetId } = useParams<{ assetId: string }>();
 
   const navigate = useNavigate();
@@ -61,7 +68,8 @@ const AssetDetailScreen: React.FC<AssetDetailScreenProps> = (props) => {
 
   const [isAddHistoryModalOpen, setIsAddHistoryModalOpen] = useState(false);
   const [isViewHistoryModalOpen, setIsViewHistoryModalOpen] = useState(false);
-  const [isQRCodeModalOpen, setIsQRCodeModalOpen] = useState(false); // Novo estado para o modal do QR Code
+  const [isQRCodeModalOpen, setIsQRCodeModalOpen] = useState(false);
+  const [isDeleteConfirmModalOpen, setIsDeleteConfirmModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const fetchAssetDetails = useCallback(async () => {
@@ -88,6 +96,7 @@ const AssetDetailScreen: React.FC<AssetDetailScreenProps> = (props) => {
         descricao: data.descricao,
         localizacao: data.localizacao,
         status: data.status,
+        utilizador: data.utilizador,
       });
     } catch (e: any) {
       console.error("Erro ao buscar detalhes do ativo:", e);
@@ -109,6 +118,7 @@ const AssetDetailScreen: React.FC<AssetDetailScreenProps> = (props) => {
         descricao: asset.descricao,
         localizacao: asset.localizacao,
         status: asset.status,
+        utilizador: asset.utilizador,
       });
     }
     setIsEditing(!isEditing);
@@ -120,41 +130,96 @@ const AssetDetailScreen: React.FC<AssetDetailScreenProps> = (props) => {
   };
 
   const handleSaveChanges = async () => {
-    if (!asset) return;
+    if (!asset || !onUpdateAsset || !onAddHistoryEntry) return;
     setIsSubmitting(true);
     setError(null);
 
     const updatePayload: Omit<Asset, 'historico' | 'ultima_atualizacao'> = {
         id: asset.id,
-        nome: editFormData.nome || asset.nome,
-        descricao: editFormData.descricao,
-        localizacao: editFormData.localizacao || '',
-        status: editFormData.status || asset.status,
+        nome: editFormData.nome !== undefined ? editFormData.nome : asset.nome,
+        descricao: editFormData.descricao !== undefined ? editFormData.descricao : asset.descricao,
+        localizacao: editFormData.localizacao !== undefined ? editFormData.localizacao : asset.localizacao,
+        status: editFormData.status !== undefined ? editFormData.status : asset.status,
         data_aquisicao: asset.data_aquisicao,
-        id_interno: asset.id_interno,
         info_garantia: asset.info_garantia,
         modelo: asset.modelo,
         numero_serie: asset.numero_serie,
+        utilizador: editFormData.utilizador !== undefined ? editFormData.utilizador : asset.utilizador,
     };
 
-    const success = await (onUpdateAsset?.(updatePayload));
-    setIsSubmitting(false);
+    const historyUpdates: Omit<HistoryEntry, 'id' | 'timestamp' | 'asset_id'>[] = [];
+
+    if (updatePayload.nome !== asset.nome) {
+      historyUpdates.push({
+        tipo_evento: HistoryEventType.Observacao,
+        descricao: `Nome alterado de "${asset.nome}" para "${updatePayload.nome}".`
+      });
+    }
+    if (updatePayload.descricao !== asset.descricao) {
+      historyUpdates.push({
+        tipo_evento: HistoryEventType.Observacao,
+        descricao: `Descrição alterada de "${asset.descricao || 'N/A'}" para "${updatePayload.descricao || 'N/A'}".`
+      });
+    }
+    if (updatePayload.localizacao !== asset.localizacao) {
+      historyUpdates.push({
+        tipo_evento: HistoryEventType.MudancaLocalizacao,
+        descricao: `Localização alterada de "${asset.localizacao}" para "${updatePayload.localizacao}".`
+      });
+    }
+    if (updatePayload.status !== asset.status) {
+      historyUpdates.push({
+        tipo_evento: HistoryEventType.MudancaStatus,
+        descricao: `Status alterado de "${asset.status}" para "${updatePayload.status}".`
+      });
+    }
+    if (updatePayload.utilizador !== asset.utilizador) {
+      historyUpdates.push({
+        tipo_evento: HistoryEventType.Observacao,
+        descricao: `Utilizador alterado de "${asset.utilizador || 'N/A'}" para "${updatePayload.utilizador || 'N/A'}".`
+      });
+    }
+
+
+    const success = await onUpdateAsset(updatePayload);
 
     if (success) {
+      for (const update of historyUpdates) {
+        await onAddHistoryEntry(asset.id, update);
+      }
       setIsEditing(false);
       fetchAssetDetails();
     } else {
       setError("Falha ao salvar alterações.");
     }
+    setIsSubmitting(false);
   };
 
-  const handleAddNewAssetSubmit = async (data: Omit<Asset, 'historico' | 'ultima_atualizacao' | 'ultima_atualizacao' | 'atualizado_por'>) => {
+  const handleAddNewAssetSubmit = async (data: Omit<Asset, 'historico' | 'ultima_atualizacao' | 'id' | 'id_interno' | 'atualizado_por'>) => {
+    if (!onAddAsset) {
+      setError("Função para adicionar ativo não disponível.");
+      return;
+    }
     setIsSubmitting(true);
     setError(null);
-    const success = await (onAddAsset?.(data));
+
+    const payload = {
+        nome: data.nome,
+        descricao: data.descricao,
+        numero_serie: data.numero_serie,
+        modelo: data.modelo,
+        localizacao: data.localizacao,
+        status: data.status,
+        data_aquisicao: data.data_aquisicao,
+        info_garantia: data.info_garantia,
+        utilizador: data.utilizador,
+    };
+    const success = await onAddAsset(payload);
+
     setIsSubmitting(false);
     if (success) {
-      navigate(`/asset/${data.id}`, { replace: true });
+      fetchAssetDetails();
+      navigate('/assets');
     } else {
        setError("Falha ao adicionar nova máquina.");
     }
@@ -162,15 +227,37 @@ const AssetDetailScreen: React.FC<AssetDetailScreenProps> = (props) => {
 
 
   const handleAddHistorySubmit = async (data: Omit<HistoryEntry, 'id' | 'timestamp' | 'asset_id'>) => {
-    if (!asset) return;
+    if (!asset || !asset.id || !onAddHistoryEntry) {
+      setError("ID da máquina ou função de histórico não disponível.");
+      setIsAddHistoryModalOpen(false);
+      return;
+    }
     setIsSubmitting(true);
-    const success = await (onAddHistoryEntry?.(asset.id, data));
+    setError(null);
+    const success = await onAddHistoryEntry(asset.id, data);
     setIsSubmitting(false);
     if (success) {
       setIsAddHistoryModalOpen(false);
       fetchAssetDetails();
     } else {
        setError("Falha ao adicionar histórico.");
+    }
+  };
+
+  const handleDeleteAsset = async () => {
+    if (!asset || !onDeleteAsset) {
+      setError("Função para excluir ativo não disponível.");
+      return;
+    }
+    setIsSubmitting(true);
+    setError(null);
+    const success = await onDeleteAsset(asset.id);
+    setIsSubmitting(false);
+    if (success) {
+      setIsDeleteConfirmModalOpen(false);
+      navigate('/assets', { replace: true });
+    } else {
+      setError("Falha ao excluir máquina.");
     }
   };
 
@@ -190,13 +277,17 @@ const AssetDetailScreen: React.FC<AssetDetailScreenProps> = (props) => {
     }
   };
 
-  // --- Render Logic ---
+  // Prepara as opções de status no formato esperado pelo Select
+  const statusOptions = ASSET_STATUS_OPTIONS.map(statusValue => ({
+    value: statusValue,
+    label: statusValue
+  }));
 
   if (loading && props.mode !== 'addAsset') {
     return <div className="text-center py-10">Carregando dados da máquina...</div>;
   }
 
-  if (error && props.mode !== 'addAsset') {
+  if (error && props.mode !== 'addAsset' && !isDeleteConfirmModalOpen) {
     return (
       <div className="text-center py-10">
         <h2 className="text-xl font-semibold text-red-600">Erro ao Carregar</h2>
@@ -208,7 +299,7 @@ const AssetDetailScreen: React.FC<AssetDetailScreenProps> = (props) => {
     );
   }
 
-  if (!asset && props.mode !== 'addAsset') {
+  if (!asset && props.mode !== 'addAsset' && !loading) {
     return (
       <div className="text-center py-10">
         <h2 className="text-xl font-semibold text-red-600">Máquina não encontrada.</h2>
@@ -256,8 +347,8 @@ const AssetDetailScreen: React.FC<AssetDetailScreenProps> = (props) => {
             ) : (
               <>
                 <Button variant="secondary" size="sm" onClick={handleEditToggle} leftIcon={<IconEdit />}>Editar</Button>
-                <Button variant="primary" size="sm" onClick={() => setIsAddHistoryModalOpen(true)} leftIcon={<IconAdd />}>+ Histórico</Button>
-                {/* Novo botão para gerar QR Code */}
+                <Button variant="primary" size="sm" onClick={() => setIsAddHistoryModalOpen(true)} leftIcon={<IconAdd />}>Histórico</Button>
+                <Button variant="danger" size="sm" onClick={() => setIsDeleteConfirmModalOpen(true)} leftIcon={<IconDelete />}>Excluir</Button>
                 <Button variant="ghost" size="sm" onClick={() => setIsQRCodeModalOpen(true)} leftIcon={<IconQrCode />}>QR Code</Button>
               </>
             )}
@@ -268,33 +359,35 @@ const AssetDetailScreen: React.FC<AssetDetailScreenProps> = (props) => {
           <AssetForm mode="addAsset" onSubmit={handleAddNewAssetSubmit} onCancel={() => navigate(-1)} isSubmitting={isSubmitting} />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 text-sm">
+            {/* Campo Nome */}
             {isEditing ? (
               <Input label="Nome" name="nome" value={editFormData.nome || ''} onChange={handleInputChange} required />
             ) : (
               <InfoItem label="Nome" value={asset?.nome} />
             )}
+            {/* Campo Descrição */}
             {isEditing ? (
               <Textarea label="Descrição" name="descricao" value={editFormData.descricao || ''} onChange={handleInputChange} rows={3} />
             ) : (
               <InfoItem label="Descrição" value={asset?.descricao} />
             )}
+            {/* Campo Localização Atual */}
             {isEditing ? (
               <Input label="Localização Atual" name="localizacao" value={editFormData.localizacao || ''} onChange={handleInputChange} />
             ) : (
               <InfoItem label="Localização Atual" value={asset?.localizacao} />
             )}
+            {/* Campo Status */}
             {isEditing ? (
               <Select
                 label="Status"
                 name="status"
                 value={editFormData.status || ''}
                 onChange={handleInputChange}
-                required options={[]}            >
-                <option value="" disabled>Selecione...</option>
-                {Object.values(AssetStatus).map(statusValue => (
-                  <option key={statusValue} value={statusValue}>{statusValue}</option>
-                ))}
-              </Select>
+                required
+                options={statusOptions} // <--- Passando as opções corretas aqui
+                placeholder="Selecione..." // Opcional: placeholder para Select
+              />
             ) : (
                <div>
                 <strong className="block text-slate-500">Status:</strong>
@@ -303,8 +396,14 @@ const AssetDetailScreen: React.FC<AssetDetailScreenProps> = (props) => {
                 </span>
               </div>
             )}
+            {/* Campo Utilizador */}
+            {isEditing ? (
+              <Input label="Utilizador" name="utilizador" value={editFormData.utilizador || ''} onChange={handleInputChange} />
+            ) : (
+              <InfoItem label="Utilizador" value={asset?.utilizador} />
+            )}
+            {/* Campos somente para visualização (não editáveis nesta tela) */}
             <InfoItem label="ID (Interno/Externo)" value={asset?.id} />
-            <InfoItem label="ID Interno (Legado)" value={asset?.id_interno} />
             <InfoItem label="Número de Série" value={asset?.numero_serie} />
             <InfoItem label="Modelo" value={asset?.modelo} />
             <InfoItem label="Data de Aquisição" value={formatDate(asset?.data_aquisicao)} />
@@ -333,7 +432,6 @@ const AssetDetailScreen: React.FC<AssetDetailScreenProps> = (props) => {
         </Card>
       )}
 
-      {/* Modals */}
       <Modal isOpen={isAddHistoryModalOpen} onClose={() => setIsAddHistoryModalOpen(false)} title={`Adicionar Histórico: ${asset?.nome || ''}`} size="md">
         <AssetForm mode="addHistory" onSubmit={handleAddHistorySubmit} onCancel={() => setIsAddHistoryModalOpen(false)} isSubmitting={isSubmitting} />
       </Modal>
@@ -345,17 +443,31 @@ const AssetDetailScreen: React.FC<AssetDetailScreenProps> = (props) => {
       <Modal isOpen={isQRCodeModalOpen} onClose={() => setIsQRCodeModalOpen(false)} title={``} size="sm">
         {asset?.id ? (
           <div className="flex flex-col items-center">
-            <QRCodeGenerator value={asset.id} size={256} className="mb-4" /> {/* Aumenta o tamanho para melhor leitura */}
+            <QRCodeGenerator value={asset.id} size={256} className="mb-4" />
             <p className="text-center text-slate-600 text-sm">ID: <span className="font-semibold">{asset.id}</span></p>
             <p className="text-center text-slate-600 text-sm">Nome: <span className="font-semibold">{asset.nome}</span></p>
             <div className="mt-4">
-              {/* Adicione a classe 'hide-on-print' aqui */}
               <Button onClick={() => window.print()} variant="secondary" className="hide-on-print">Imprimir QR Code</Button>
             </div>
           </div>
         ) : (
           <p className="text-center text-slate-500">ID do ativo não disponível para gerar QR Code.</p>
         )}
+      </Modal>
+
+      <Modal isOpen={isDeleteConfirmModalOpen} onClose={() => setIsDeleteConfirmModalOpen(false)} title="Confirmar Exclusão" size="sm">
+        <div className="text-center">
+          <p className="text-slate-700 mb-4">Tem certeza que deseja excluir a máquina <span className="font-semibold">"{asset?.nome}"</span> (ID: {asset?.id})?</p>
+          <p className="text-sm text-red-500 mb-6">Esta ação é irreversível e removerá todos os dados e histórico associados.</p>
+          <div className="flex justify-center space-x-3">
+            <Button type="button" variant="secondary" onClick={() => setIsDeleteConfirmModalOpen(false)} disabled={isSubmitting}>
+              Cancelar
+            </Button>
+            <Button type="button" variant="danger" onClick={handleDeleteAsset} disabled={isSubmitting}>
+              {isSubmitting ? 'Excluindo...' : 'Confirmar Exclusão'}
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );

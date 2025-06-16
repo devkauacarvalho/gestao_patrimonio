@@ -1,26 +1,22 @@
+// App.tsx
 import React, { useState, useCallback, useEffect } from 'react';
 import { Routes, Route, useNavigate, useParams } from 'react-router-dom';
-import { Asset, HistoryEntry } from './types'; // Assuming types are still valid
+import { Asset, HistoryEntry } from './types';
 import { APP_NAME, ACCENT_COLOR_CLASS_BG } from './constants';
 import HomeScreen from './components/screens/HomeScreen';
 import ScanScreen from './components/screens/ScanScreen';
 import AssetListScreen from './components/screens/AssetListScreen';
 import AssetDetailScreen from './components/screens/AssetDetailScreen';
 
-// Define a base URL for the API. Adjust if your backend runs elsewhere.
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 const App: React.FC = () => {
-  // State to hold assets fetched from the API
   const [assets, setAssets] = useState<Asset[]>([]);
-  // State to handle loading indicators
   const [loading, setLoading] = useState<boolean>(true);
-  // State to handle errors during API calls
   const [error, setError] = useState<string | null>(null);
 
   const navigate = useNavigate();
 
-  // Fetch all assets from the API when the component mounts
   useEffect(() => {
     const fetchAssets = async () => {
       setLoading(true);
@@ -31,7 +27,6 @@ const App: React.FC = () => {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data: Asset[] = await response.json();
-        // Ensure 'historico' is always an array, even if API returns null/undefined
         const assetsWithHistory = data.map(asset => ({ ...asset, historico: asset.historico || [] }));
         setAssets(assetsWithHistory);
       } catch (e: any) {
@@ -43,30 +38,22 @@ const App: React.FC = () => {
     };
 
     fetchAssets();
-  }, []); // Empty dependency array means this runs once on mount
+  }, []);
 
-  // Function to find an asset in the current state (used by handleScan)
-  // Note: This relies on the initially fetched list. For absolute freshness,
-  // handleScan could trigger a specific fetch, but this is simpler for now.
   const findAssetById = useCallback((id: string): Asset | undefined => {
     return assets.find(asset => asset.id.toLowerCase() === id.toLowerCase());
   }, [assets]);
 
-  // Handle navigation after scanning/manual ID entry
   const handleScan = (id: string) => {
     const asset = findAssetById(id);
     if (asset) {
       navigate(`/asset/${asset.id}`);
     } else {
-      // Maybe fetch the specific asset here if not found in the list?
-      // For now, just show an alert.
       alert(`Máquina com ID "${id}" não encontrada na lista carregada.`);
-      // Consider adding a fetch here: fetch(`${API_BASE_URL}/api/assets/${id}`).then(...)
       navigate('/scan', { replace: true });
     }
   };
 
-  // Update an asset via API PUT request
   const updateAsset = useCallback(async (updatedAssetData: Omit<Asset, 'historico' | 'ultima_atualizacao'>) => {
     setError(null);
     try {
@@ -85,24 +72,23 @@ const App: React.FC = () => {
 
       const updatedAssetFromServer: Asset = await response.json();
 
-      // Update the local state
       setAssets(prevAssets =>
         prevAssets.map(asset =>
           asset.id === updatedAssetFromServer.id
-            ? { ...asset, ...updatedAssetFromServer } // Merge server data, keeping existing history if not returned
+            ? { ...asset, ...updatedAssetFromServer }
             : asset
         )
       );
-      return true; // Indicate success
+      return true;
     } catch (e: any) {
       console.error("Erro ao atualizar ativo:", e);
       setError(`Falha ao atualizar ativo: ${e.message}`);
-      return false; // Indicate failure
+      return false;
     }
   }, []);
 
-  // Add a new asset via API POST request
-  const addAsset = useCallback(async (newAssetData: Omit<Asset, 'historico' | 'ultima_atualizacao'>) => {
+  // Modifiquei o tipo de 'newAssetData' para omitir 'id' e 'id_interno'
+  const addAsset = useCallback(async (newAssetData: Omit<Asset, 'historico' | 'ultima_atualizacao' | 'id' | 'id_interno' | 'atualizado_por'>) => {
     setError(null);
     try {
       const response = await fetch(`${API_BASE_URL}/api/assets`, {
@@ -110,7 +96,7 @@ const App: React.FC = () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(newAssetData),
+        body: JSON.stringify(newAssetData), // newAssetData não contém 'id' ou 'id_interno'
       });
 
       if (!response.ok) {
@@ -118,19 +104,17 @@ const App: React.FC = () => {
         throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
       }
 
-      const addedAssetFromServer: Asset = await response.json();
+      const addedAssetFromServer: Asset = await response.json(); // O backend retorna o ativo COMPLETO, incluindo o novo ID
 
-      // Update the local state by adding the new asset
       setAssets(prevAssets => [...prevAssets, { ...addedAssetFromServer, historico: [] }]);
-      return true; // Indicate success
+      return true;
     } catch (e: any) {
       console.error("Erro ao adicionar ativo:", e);
       setError(`Falha ao adicionar ativo: ${e.message}`);
-      return false; // Indicate failure
+      return false;
     }
   }, []);
 
-  // Add a history entry via API POST request
   const addHistoryEntry = useCallback(async (assetId: string, entryData: Omit<HistoryEntry, 'id' | 'timestamp' | 'asset_id'>) => {
     setError(null);
     try {
@@ -149,38 +133,67 @@ const App: React.FC = () => {
 
       const newHistoryEntry: HistoryEntry = await response.json();
 
-      // Update the local state by adding the new history entry to the correct asset
       setAssets(prevAssets =>
         prevAssets.map(asset => {
           if (asset.id === assetId) {
-            // Add the new entry and update the timestamp from the server if available
-            // (The backend updates ultima_atualizacao, but doesn't return the whole asset here)
-            // We could refetch the asset for perfect sync, or just add the history entry locally.
             return {
               ...asset,
               historico: [newHistoryEntry, ...(asset.historico || [])],
-              // Optionally update ultima_atualizacao locally if needed immediately,
-              // otherwise rely on next full fetch or detail view fetch.
-              // ultima_atualizacao: new Date().toISOString() // Or use timestamp from newHistoryEntry?
             };
           }
           return asset;
         })
       );
-      return true; // Indicate success
+      return true;
     } catch (e: any) {
       console.error("Erro ao adicionar histórico:", e);
       setError(`Falha ao adicionar histórico: ${e.message}`);
-      return false; // Indicate failure
+      return false;
     }
   }, []);
 
-  // Display loading or error messages
+  const deleteAsset = useCallback(async (assetId: string) => {
+    setError(null);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/assets/${assetId}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        const responseText = await response.text();
+        if (responseText) {
+          try {
+            const deletedAssetFromServer = JSON.parse(responseText);
+            console.log("Ativo excluído:", deletedAssetFromServer.deletedAsset);
+          } catch (parseError) {
+            console.warn("Resposta não é JSON válido, mas a exclusão foi bem-sucedida:", responseText);
+          }
+        } else {
+          console.log("Ativo excluído com sucesso (resposta vazia).");
+        }
+        setAssets(prevAssets => prevAssets.filter(asset => asset.id !== assetId));
+        return true;
+      } else {
+        const errorText = await response.text();
+        let errorMessage = `HTTP error! status: ${response.status}`;
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.message || errorMessage;
+        } catch (parseError) {
+          errorMessage = errorText || errorMessage;
+        }
+        throw new Error(errorMessage);
+      }
+    } catch (e: any) {
+      console.error("Erro ao excluir ativo:", e);
+      setError(`Falha ao excluir ativo: ${e.message}`);
+      return false;
+    }
+  }, []);
+
   if (loading) {
     return <div className="flex justify-center items-center min-h-screen">Carregando...</div>;
   }
-
-  // Removed the footer note about localStorage
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -199,32 +212,28 @@ const App: React.FC = () => {
           </div>
         )}
         <Routes>
-          {/* Pass addAsset to HomeScreen */}
           <Route path="/" element={<HomeScreen onAddAsset={() => navigate('/add-asset')} />} />
           <Route path="/scan" element={<ScanScreen onScan={handleScan} />} />
-          {/* Pass assets fetched from API to AssetListScreen */}
           <Route path="/assets" element={<AssetListScreen assets={assets} />} />
-          {/* AssetDetailScreen will now fetch its own data but needs update/add functions */}
           <Route
             path="/asset/:assetId"
             element={
               <AssetDetailScreen
-                // assets={assets} // No longer pass the whole list
                 onUpdateAsset={updateAsset}
                 onAddHistoryEntry={addHistoryEntry}
-                apiBaseUrl={API_BASE_URL} // Pass API URL
+                onDeleteAsset={deleteAsset}
+                apiBaseUrl={API_BASE_URL}
               />
             }
           />
-          {/* New route for adding a new asset */}
           <Route
             path="/add-asset"
             element={
               <AssetDetailScreen
-                mode="addAsset" // Pass a mode to indicate it's for adding
+                mode="addAsset"
                 onAddAsset={addAsset}
-                onUpdateAsset={updateAsset} // Keep this for type compatibility, though not used in add mode
-                onAddHistoryEntry={addHistoryEntry} // Keep this for type compatibility, though not used in add mode
+                onUpdateAsset={updateAsset}
+                onAddHistoryEntry={addHistoryEntry}
                 apiBaseUrl={API_BASE_URL}
               />
             }
@@ -233,7 +242,6 @@ const App: React.FC = () => {
       </main>
       <footer className="text-center p-4 text-sm text-slate-500 border-t border-slate-200">
         © {new Date().getFullYear()} Make Distribuidora. Todos os direitos reservados.
-        {/* Removed the note about localStorage */}
       </footer>
     </div>
   );

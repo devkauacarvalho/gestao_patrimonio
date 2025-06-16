@@ -19,6 +19,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onAddAsset }) => {
             Gerencie o patrimônio da Make Distribuidora de forma simples e eficiente.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* New button to add a new asset */}
+            <Button variant="primary" size="lg" fullWidth leftIcon={<IconAdd className="w-6 h-6" />} onClick={onAddAsset}>
+              Adicionar Nova Máquina
+            </Button>
             <Link to="/scan">
               <Button variant="primary" size="lg" fullWidth leftIcon={<IconQrCode className="w-6 h-6" />}>
                 Escanear QR Code
@@ -29,10 +33,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onAddAsset }) => {
                 Ver Todas as Máquinas
               </Button>
             </Link>
-            {/* New button to add a new asset */}
-            <Button variant="primary" size="lg" fullWidth leftIcon={<IconAdd className="w-6 h-6" />} onClick={onAddAsset}>
-              Adicionar Nova Máquina
-            </Button>
           </div>
         </div>
       </Card>

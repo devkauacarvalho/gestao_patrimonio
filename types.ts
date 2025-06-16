@@ -1,16 +1,17 @@
+// types.ts
 export enum AssetStatus {
   EmOperacao = "Em Operação",
-  EmManutencao = "Em Manutenção",
+  EmManutencao = "Em Manutencao",
   ForaDeUso = "Fora de Uso",
-  AguardandoPecas = "Aguardando Peças",
+  AguardandoPecas = "Aguardando Pecas",
 }
 
 export enum HistoryEventType {
-  ManutencaoCorretiva = "Manutenção Corretiva",
-  ManutencaoPreventiva = "Manutenção Preventiva",
-  MudancaStatus = "Mudança Status",
-  MudancaLocalizacao = "Mudança Localização",
-  Observacao = "Observação",
+  ManutencaoCorretiva = "Manutencao Corretiva",
+  ManutencaoPreventiva = "Manutencao Preventiva",
+  MudancaStatus = "Mudanca Status",
+  MudancaLocalizacao = "Mudanca Localizacao",
+  Observacao = "Observacao",
 }
 
 export interface HistoryEntry {
@@ -26,7 +27,6 @@ export interface Asset {
   nome: string;
   descricao?: string; // Descrição opcional da máquina
   numero_serie: string;
-  id_interno: string; // should be same as id
   modelo: string;
   localizacao: string;
   status: AssetStatus;
@@ -35,4 +35,5 @@ export interface Asset {
   ultima_atualizacao: string; // ISO string
   atualizado_por?: string; // Optional
   historico: HistoryEntry[];
+  utilizador?: string; // NOVO CAMPO: Utilizador da máquina
 }

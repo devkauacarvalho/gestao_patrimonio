@@ -1,4 +1,4 @@
-
+// components/features/AssetListItem.tsx
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Asset, AssetStatus } from '../../types';
@@ -30,7 +30,7 @@ const AssetListItem: React.FC<AssetListItemProps> = ({ asset }) => {
         <div className="flex justify-between items-start">
           <div>
             <h3 className={`text-lg font-semibold ${ACCENT_COLOR_CLASS_TEXT}`}>{asset.nome}</h3>
-            <p className="text-sm text-slate-500">{asset.id_interno}</p>
+            {/* <p className="text-sm text-slate-500">{asset.id_interno}</p> REMOVIDO */}
           </div>
           <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(asset.status)}`}>
             {asset.status}
