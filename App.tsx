@@ -1,7 +1,7 @@
 // App.tsx
 import React, { useState, useCallback, useEffect } from 'react';
 import { Routes, Route, useNavigate, useParams } from 'react-router-dom';
-import { Asset, HistoryEntry } from './types';
+import { Asset, HistoryEntry, Category } from './types';
 import { APP_NAME, ACCENT_COLOR_CLASS_BG } from './constants';
 import HomeScreen from './components/screens/HomeScreen';
 import ScanScreen from './components/screens/ScanScreen';
@@ -12,33 +12,56 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 const App: React.FC = () => {
   const [assets, setAssets] = useState<Asset[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const fetchAssets = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const response = await fetch(`${API_BASE_URL}/api/assets`);
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data: Asset[] = await response.json();
-        const assetsWithHistory = data.map(asset => ({ ...asset, historico: asset.historico || [] }));
-        setAssets(assetsWithHistory);
-      } catch (e: any) {
-        console.error("Erro ao buscar ativos:", e);
-        setError("Falha ao carregar dados dos ativos. Verifique se o backend está a correr.");
-      } finally {
-        setLoading(false);
+  // Função para buscar ativos
+  const fetchAssets = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      // Usar API_BASE_URL
+      const response = await fetch(`${API_BASE_URL}/api/assets`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-    };
+      const data: Asset[] = await response.json();
+      const assetsWithHistory = data.map(asset => ({ ...asset, historico: asset.historico || [] }));
+      setAssets(assetsWithHistory);
+    } catch (e: any) {
+      console.error("Erro ao buscar ativos:", e);
+      setError("Falha ao carregar dados dos ativos. Verifique se o backend está a correr.");
+    } finally {
+      setLoading(false);
+    }
+  }, [API_BASE_URL]);
 
+  // Função para buscar categorias
+  const fetchCategories = useCallback(async () => {
+    setError(null);
+    try {
+      // Usar API_BASE_URL
+      const response = await fetch(`${API_BASE_URL}/api/assets/categories`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data: Category[] = await response.json();
+      setCategories(data);
+    } catch (e: any) {
+      console.error("Erro ao buscar categorias:", e);
+      setError("Falha ao carregar categorias.");
+    }
+  }, [API_BASE_URL]);
+
+
+  useEffect(() => {
     fetchAssets();
-  }, []);
+    fetchCategories();
+  }, [fetchAssets, fetchCategories]);
+
 
   const findAssetById = useCallback((id: string): Asset | undefined => {
     return assets.find(asset => asset.id.toLowerCase() === id.toLowerCase());
@@ -57,6 +80,7 @@ const App: React.FC = () => {
   const updateAsset = useCallback(async (updatedAssetData: Omit<Asset, 'historico' | 'ultima_atualizacao'>) => {
     setError(null);
     try {
+      // Usar API_BASE_URL
       const response = await fetch(`${API_BASE_URL}/api/assets/${updatedAssetData.id}`, {
         method: 'PUT',
         headers: {
@@ -85,18 +109,18 @@ const App: React.FC = () => {
       setError(`Falha ao atualizar ativo: ${e.message}`);
       return false;
     }
-  }, []);
+  }, [API_BASE_URL]);
 
-  // Modifiquei o tipo de 'newAssetData' para omitir 'id' e 'id_interno'
   const addAsset = useCallback(async (newAssetData: Omit<Asset, 'historico' | 'ultima_atualizacao' | 'id' | 'id_interno' | 'atualizado_por'>) => {
     setError(null);
     try {
+      // Usar API_BASE_URL
       const response = await fetch(`${API_BASE_URL}/api/assets`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(newAssetData), // newAssetData não contém 'id' ou 'id_interno'
+        body: JSON.stringify(newAssetData),
       });
 
       if (!response.ok) {
@@ -104,7 +128,7 @@ const App: React.FC = () => {
         throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
       }
 
-      const addedAssetFromServer: Asset = await response.json(); // O backend retorna o ativo COMPLETO, incluindo o novo ID
+      const addedAssetFromServer: Asset = await response.json();
 
       setAssets(prevAssets => [...prevAssets, { ...addedAssetFromServer, historico: [] }]);
       return true;
@@ -113,11 +137,40 @@ const App: React.FC = () => {
       setError(`Falha ao adicionar ativo: ${e.message}`);
       return false;
     }
-  }, []);
+  }, [API_BASE_URL]);
+
+  // Nova função para adicionar categoria
+  const addCategory = useCallback(async (categoryName: string, categoryPrefix: string) => {
+    setError(null);
+    try {
+      // Usar API_BASE_URL
+      const response = await fetch(`${API_BASE_URL}/api/assets/categories`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name: categoryName, prefix: categoryPrefix }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      }
+      const newCategory: Category = await response.json();
+      setCategories(prevCategories => [...prevCategories, newCategory]);
+      return newCategory;
+    } catch (e: any) {
+      console.error("Erro ao adicionar categoria:", e);
+      setError(`Falha ao adicionar categoria: ${e.message}`);
+      return null;
+    }
+  }, [API_BASE_URL]);
+
 
   const addHistoryEntry = useCallback(async (assetId: string, entryData: Omit<HistoryEntry, 'id' | 'timestamp' | 'asset_id'>) => {
     setError(null);
     try {
+      // Usar API_BASE_URL
       const response = await fetch(`${API_BASE_URL}/api/assets/${assetId}/history`, {
         method: 'POST',
         headers: {
@@ -150,11 +203,13 @@ const App: React.FC = () => {
       setError(`Falha ao adicionar histórico: ${e.message}`);
       return false;
     }
-  }, []);
+  }, [API_BASE_URL]);
+
 
   const deleteAsset = useCallback(async (assetId: string) => {
     setError(null);
     try {
+      // Usar API_BASE_URL
       const response = await fetch(`${API_BASE_URL}/api/assets/${assetId}`, {
         method: 'DELETE',
       });
@@ -189,7 +244,7 @@ const App: React.FC = () => {
       setError(`Falha ao excluir ativo: ${e.message}`);
       return false;
     }
-  }, []);
+  }, [API_BASE_URL]);
 
   if (loading) {
     return <div className="flex justify-center items-center min-h-screen">Carregando...</div>;
@@ -218,23 +273,29 @@ const App: React.FC = () => {
           <Route
             path="/asset/:assetId"
             element={
+              // Remover a função de seta extra, passar o JSX AssetDetailScreen diretamente
               <AssetDetailScreen
                 onUpdateAsset={updateAsset}
                 onAddHistoryEntry={addHistoryEntry}
                 onDeleteAsset={deleteAsset}
                 apiBaseUrl={API_BASE_URL}
+                categories={categories}
+                onAddCategory={addCategory}
               />
             }
           />
           <Route
             path="/add-asset"
             element={
+              // Remover a função de seta extra aqui também
               <AssetDetailScreen
                 mode="addAsset"
                 onAddAsset={addAsset}
                 onUpdateAsset={updateAsset}
                 onAddHistoryEntry={addHistoryEntry}
                 apiBaseUrl={API_BASE_URL}
+                categories={categories}
+                onAddCategory={addCategory}
               />
             }
           />

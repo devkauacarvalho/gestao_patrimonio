@@ -14,26 +14,35 @@ export enum HistoryEventType {
   Observacao = "Observacao",
 }
 
+export interface Category {
+  id: number;
+  name: string;
+  prefix: string; // Ex: "PC", "NOTE"
+}
+
 export interface HistoryEntry {
-  id: string; // unique id for mapping, e.g., UUID
-  timestamp: string; // ISO string
+  id: string;
+  timestamp: string;
   tipo_evento: HistoryEventType;
   descricao: string;
-  responsavel?: string; // Optional, as authentication is optional
+  responsavel?: string;
 }
 
 export interface Asset {
-  id: string; // e.g., MAKEDIST-MAQ-00123
+  id: string;
   nome: string;
-  descricao?: string; // Descrição opcional da máquina
+  descricao?: string;
   numero_serie: string;
   modelo: string;
   localizacao: string;
   status: AssetStatus;
-  data_aquisicao: string; // ISO string
+  data_aquisicao: string;
   info_garantia: string;
-  ultima_atualizacao: string; // ISO string
-  atualizado_por?: string; // Optional
+  ultima_atualizacao: string;
+  atualizado_por?: string;
   historico: HistoryEntry[];
-  utilizador?: string; // NOVO CAMPO: Utilizador da máquina
+  utilizador?: string;
+  category_id?: number; // NOVO CAMPO: ID da categoria
+  category_name?: string; // NOVO CAMPO (opcional, para exibição)
+  category_prefix?: string; // NOVO CAMPO (opcional, para geração de ID)
 }

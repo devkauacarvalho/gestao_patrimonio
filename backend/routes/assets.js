@@ -3,23 +3,57 @@ import express from 'express';
 const router = express.Router();
 import db from '../db.js';
 
-// GET /api/assets - Obter todos os ativos
-router.get("/", async (req, res, next) => {
+// Rota para Categorias
+router.get("/categories", async (req, res, next) => {
   try {
-    // Adiciona 'utilizador' na seleção explícita
-    const result = await db.query("SELECT id, nome, descricao, numero_serie, modelo, localizacao, status, data_aquisicao, info_garantia, ultima_atualizacao, atualizado_por, utilizador FROM assets ORDER BY id ASC");
+    const result = await db.query("SELECT * FROM categories ORDER BY name ASC");
     res.json(result.rows);
   } catch (err) {
     next(err);
   }
 });
 
-// GET /api/assets/:id - Obter um ativo específico pelo ID
+router.post("/categories", async (req, res, next) => {
+  const { name, prefix } = req.body;
+  if (!name || !prefix) {
+    return res.status(400).json({ message: "Nome e Prefixo da categoria são obrigatórios." });
+  }
+  try {
+    const result = await db.query(
+      "INSERT INTO categories (name, prefix) VALUES ($1, $2) RETURNING *",
+      [name, prefix]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/assets - Obter todos os ativos (com JOIN de categoria)
+router.get("/", async (req, res, next) => {
+  try {
+    const result = await db.query(`
+      SELECT a.*, c.name as category_name, c.prefix as category_prefix
+      FROM assets a
+      LEFT JOIN categories c ON a.category_id = c.id
+      ORDER BY a.id ASC
+    `);
+    res.json(result.rows);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/assets/:id - Obter um ativo específico (com JOIN de categoria)
 router.get("/:id", async (req, res, next) => {
   const { id } = req.params;
   try {
-    // Adiciona 'utilizador' na seleção explícita
-    const assetResult = await db.query("SELECT id, nome, descricao, numero_serie, modelo, localizacao, status, data_aquisicao, info_garantia, ultima_atualizacao, atualizado_por, utilizador FROM assets WHERE id = $1", [id]);
+    const assetResult = await db.query(`
+      SELECT a.*, c.name as category_name, c.prefix as category_prefix
+      FROM assets a
+      LEFT JOIN categories c ON a.category_id = c.id
+      WHERE a.id = $1
+    `, [id]);
     if (assetResult.rows.length === 0) {
       return res.status(404).json({ message: "Ativo não encontrado" });
     }
@@ -35,25 +69,32 @@ router.get("/:id", async (req, res, next) => {
   }
 });
 
-// POST /api/assets - Adicionar um novo ativo (para criação)
+// POST /api/assets - Adicionar um novo ativo (com geração de ID baseada em categoria)
 router.post("/", async (req, res, next) => {
-  // Adiciona 'utilizador' na desestruturação do corpo da requisição
-  const { nome, descricao, numero_serie, modelo, localizacao, status, data_aquisicao, info_garantia, utilizador } = req.body;
+  const { nome, descricao, numero_serie, modelo, localizacao, status, data_aquisicao, info_garantia, utilizador, category_id } = req.body;
 
-  if (!nome || !modelo || !localizacao || !status || !data_aquisicao) {
-    return res.status(400).json({ message: "Nome, Modelo, Localização, Status e Data de Aquisição são obrigatórios para criar um ativo." });
+  if (!nome || !modelo || !localizacao || !status || !data_aquisicao || !category_id) {
+    return res.status(400).json({ message: "Nome, Modelo, Localização, Status, Data de Aquisição e Categoria são obrigatórios." });
   }
 
   try {
+    // Obter o prefixo da categoria
+    const categoryResult = await db.query("SELECT prefix FROM categories WHERE id = $1", [category_id]);
+    if (categoryResult.rows.length === 0) {
+      return res.status(400).json({ message: "Categoria selecionada inválida." });
+    }
+    const categoryPrefix = categoryResult.rows[0].prefix;
+
+    // Gerar o próximo ID sequencial da sequência geral de ativos
     const seqResult = await db.query("SELECT nextval('asset_id_seq') as next_num");
     const nextNum = seqResult.rows[0].next_num;
-    const newId = `MAKEDIST-MAQ-${String(nextNum).padStart(5, '0')}`;
+    // Formatar o ID com base no prefixo da categoria e 5 dígitos
+    const newId = `MAKEDIST-<span class="math-inline">\{categoryPrefix\}\-</span>{String(nextNum).padStart(5, '0')}`;
 
-    // Adiciona 'utilizador' na consulta INSERT e nos valores
     const result = await db.query(
-      `INSERT INTO assets (id, nome, descricao, numero_serie, modelo, localizacao, status, data_aquisicao, info_garantia, ultima_atualizacao, utilizador)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, CURRENT_TIMESTAMP, $10) RETURNING *`,
-      [newId, nome, descricao, numero_serie, modelo, localizacao, status, data_aquisicao, info_garantia, utilizador]
+      `INSERT INTO assets (id, nome, descricao, numero_serie, modelo, localizacao, status, data_aquisicao, info_garantia, ultima_atualizacao, utilizador, category_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, CURRENT_TIMESTAMP, $10, $11) RETURNING *`,
+      [newId, nome, descricao, numero_serie, modelo, localizacao, status, data_aquisicao, info_garantia, utilizador, category_id]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
@@ -61,21 +102,21 @@ router.post("/", async (req, res, next) => {
   }
 });
 
-// PUT /api/assets/:id - Atualizar um ativo (para edição)
+// PUT /api/assets/:id - Atualizar um ativo (inclui category_id)
 router.put("/:id", async (req, res, next) => {
   const { id } = req.params;
-  // Adiciona 'utilizador' na desestruturação do corpo da requisição
-  const { nome, descricao, localizacao, status, utilizador } = req.body;
+  const { nome, descricao, localizacao, status, utilizador, category_id } = req.body;
 
-  if (!nome || !status) {
-    return res.status(400).json({ message: "Nome e Status são obrigatórios." });
+  if (!nome || !status || !category_id) { // category_id também obrigatório
+    return res.status(400).json({ message: "Nome, Status e Categoria são obrigatórios." });
   }
 
   try {
-    // Adiciona 'utilizador' na consulta UPDATE
+    // Se a categoria for alterada, o ID NÃO muda (o ID é gerado na criação).
+    // Apenas o category_id é atualizado.
     const result = await db.query(
-      "UPDATE assets SET nome = $1, descricao = $2, localizacao = $3, status = $4, utilizador = $5, ultima_atualizacao = CURRENT_TIMESTAMP WHERE id = $6 RETURNING *",
-      [nome, descricao, localizacao, status, utilizador, id]
+      "UPDATE assets SET nome = $1, descricao = $2, localizacao = $3, status = $4, utilizador = $5, category_id = $6, ultima_atualizacao = CURRENT_TIMESTAMP WHERE id = $7 RETURNING *",
+      [nome, descricao, localizacao, status, utilizador, category_id, id]
     );
     if (result.rows.length === 0) {
       return res.status(404).json({ message: "Ativo não encontrado para atualização" });
