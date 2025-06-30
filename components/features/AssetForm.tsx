@@ -1,6 +1,6 @@
 // components/features/AssetForm.tsx
 import React, { useState, useEffect } from 'react';
-import { Asset, HistoryEntry, AssetStatus, HistoryEventType, Category } from '../../types'; // Importar Category
+import { Asset, HistoryEntry, AssetStatus, HistoryEventType, Category } from '../../types';
 import { ASSET_STATUS_OPTIONS, HISTORY_EVENT_TYPE_OPTIONS } from '../../constants';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
@@ -11,8 +11,8 @@ interface AssetFormBaseProps {
   asset?: Asset;
   onCancel: () => void;
   isSubmitting?: boolean;
-  categories: Category[]; // NOVO: Recebe a lista de categorias
-  onAddCategory: (name: string, prefix: string) => Promise<Category | null>; // NOVO: Função para adicionar nova categoria
+  categories: Category[];
+  onAddCategory: (name: string, prefix: string) => Promise<Category | null>;
 }
 
 interface UpdateAssetFormProps extends AssetFormBaseProps {
@@ -33,7 +33,7 @@ interface AddAssetFormProps extends AssetFormBaseProps {
 type AssetFormProps = UpdateAssetFormProps | AddHistoryFormProps | AddAssetFormProps;
 
 const AssetForm: React.FC<AssetFormProps> = (props) => {
-  const { mode, asset, onSubmit, onCancel, isSubmitting, categories, onAddCategory } = props; // Desestruturar novas props
+  const { mode, asset, onSubmit, onCancel, isSubmitting, categories, onAddCategory } = props;
 
   const [nome, setNome] = useState(asset?.nome || '');
   const [numeroSerie, setNumeroSerie] = useState(asset?.numero_serie || '');
@@ -44,10 +44,11 @@ const AssetForm: React.FC<AssetFormProps> = (props) => {
   const [infoGarantia, setInfoGarantia] = useState(asset?.info_garantia || '');
   const [descricaoAsset, setDescricaoAsset] = useState(asset?.descricao || '');
   const [utilizador, setUtilizador] = useState(asset?.utilizador || '');
-  const [selectedCategory, setSelectedCategory] = useState<number | string>(asset?.category_id || ''); // NOVO: Estado para categoria selecionada
-  const [newCategoryName, setNewCategoryName] = useState(''); // NOVO: Estado para nome da nova categoria
-  const [newCategoryPrefix, setNewCategoryPrefix] = useState(''); // NOVO: Estado para prefixo da nova categoria
-  const [showNewCategoryInput, setShowNewCategoryInput] = useState(false); // NOVO: Estado para mostrar input de nova categoria
+  // selectedCategory agora pode ser string para o valor 'addNew'
+  const [selectedCategory, setSelectedCategory] = useState<string>(asset?.category_id?.toString() || '');
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [newCategoryPrefix, setNewCategoryPrefix] = useState('');
+  const [showNewCategoryInput, setShowNewCategoryInput] = useState(false);
 
 
   const [tipoEvento, setTipoEvento] = useState<HistoryEventType>(HistoryEventType.Observacao);
@@ -64,8 +65,8 @@ const AssetForm: React.FC<AssetFormProps> = (props) => {
       setInfoGarantia(asset.info_garantia);
       setDescricaoAsset(asset.descricao || '');
       setUtilizador(asset.utilizador || '');
-      setSelectedCategory(asset.category_id || ''); // Popula categoria ao editar
-      setShowNewCategoryInput(false); // Esconde input de nova categoria
+      setSelectedCategory(asset.category_id?.toString() || ''); // Garante que seja string
+      setShowNewCategoryInput(false);
     } else if (mode === 'addAsset') {
       setNome('');
       setNumeroSerie('');
@@ -76,7 +77,7 @@ const AssetForm: React.FC<AssetFormProps> = (props) => {
       setInfoGarantia('');
       setDescricaoAsset('');
       setUtilizador('');
-      setSelectedCategory(''); // Reseta categoria ao adicionar
+      setSelectedCategory(''); // Reseta para vazio ao adicionar
       setNewCategoryName('');
       setNewCategoryPrefix('');
       setShowNewCategoryInput(false);
@@ -86,22 +87,33 @@ const AssetForm: React.FC<AssetFormProps> = (props) => {
     }
   }, [asset, mode]);
 
-  const handleSubmit = async (e: React.FormEvent) => { // Tornar handleSubmit assíncrono
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    let finalCategoryId = selectedCategory;
+    let finalCategoryId: number | null = null; // Inicializa como null
 
-    if (showNewCategoryInput && newCategoryName && newCategoryPrefix) {
-      // Tentar adicionar a nova categoria
+    // Lógica para adicionar nova categoria se a opção estiver visível
+    if (showNewCategoryInput) {
+      if (!newCategoryName || !newCategoryPrefix) {
+        alert("Por favor, preencha o nome e o prefixo da nova categoria.");
+        return;
+      }
       const addedCategory = await onAddCategory(newCategoryName, newCategoryPrefix);
       if (addedCategory) {
         finalCategoryId = addedCategory.id;
       } else {
-        // Se falhar ao adicionar categoria, não prosseguir com a submissão do ativo
-        return;
+        // Se falhar ao adicionar categoria, não prosseguir
+        return; // onAddCategory já deve setar o erro global
+      }
+    } else {
+      // Se não está adicionando nova categoria, tenta usar a selecionada
+      const parsedId = parseInt(selectedCategory);
+      if (!isNaN(parsedId)) { // Verifica se é um número válido
+        finalCategoryId = parsedId;
       }
     }
 
+    // A validação agora considera se finalCategoryId foi definido após a lógica acima
     if (!finalCategoryId && (mode === 'addAsset' || mode === 'updateAsset')) {
       alert("Por favor, selecione ou adicione uma categoria.");
       return;
@@ -118,7 +130,7 @@ const AssetForm: React.FC<AssetFormProps> = (props) => {
         data_aquisicao: dataAquisicao ? new Date(dataAquisicao).toISOString() : '',
         info_garantia: infoGarantia,
         utilizador,
-        category_id: finalCategoryId as number, // Inclui category_id
+        category_id: finalCategoryId as number, // Garante que seja número
       });
     } else if (props.mode === 'addHistory') {
       (props.onSubmit as AddHistoryFormProps['onSubmit'])({
@@ -136,7 +148,7 @@ const AssetForm: React.FC<AssetFormProps> = (props) => {
         data_aquisicao: dataAquisicao ? new Date(dataAquisicao).toISOString() : '',
         info_garantia: infoGarantia,
         utilizador,
-        category_id: finalCategoryId as number, // Inclui category_id
+        category_id: finalCategoryId as number, // Garante que seja número
       });
     }
   };
@@ -147,11 +159,10 @@ const AssetForm: React.FC<AssetFormProps> = (props) => {
   }));
 
   const categoryOptions = categories.map(cat => ({
-    value: cat.id.toString(), // Convertendo para string para o Select
+    value: cat.id.toString(), // Converte para string
     label: cat.name
   }));
 
-  // Adiciona a opção "Adicionar nova categoria" no final
   const allCategoryOptions = [...categoryOptions, { value: 'addNew', label: 'Adicionar nova categoria' }];
 
 
@@ -175,27 +186,31 @@ const AssetForm: React.FC<AssetFormProps> = (props) => {
             required
           />
 
-          {/* NOVO: Campo de seleção de Categoria */}
+          {/* Campo de seleção de Categoria */}
           <Select
             label="Categoria"
             id="category"
-            name="category_id" // Nome do campo para o payload
-            value={selectedCategory.toString()} // Converte para string para o Select
+            name="category_id"
+            value={selectedCategory} // Usa selectedCategory (que pode ser string 'addNew' ou ID numérico)
             onChange={(e) => {
-              if (e.target.value === 'addNew') {
+              const value = e.target.value;
+              setSelectedCategory(value); // Atualiza o estado com o valor exato
+
+              if (value === 'addNew') {
                 setShowNewCategoryInput(true);
-                setSelectedCategory(''); // Limpa a seleção para não ficar "addNew"
+                // Não precisamos limpar selectedCategory aqui, ele agora vai manter 'addNew'
               } else {
                 setShowNewCategoryInput(false);
-                setSelectedCategory(parseInt(e.target.value)); // Converte de volta para número
+                setNewCategoryName(''); // Limpa inputs de nova categoria
+                setNewCategoryPrefix('');
               }
             }}
             options={allCategoryOptions}
-            required
+            // Remove 'required' aqui, pois a validação será feita no handleSubmit
             placeholder="Selecione uma categoria"
           />
 
-          {/* NOVO: Input para nova categoria (visível condicionalmente) */}
+          {/* Input para nova categoria (visível condicionalmente) */}
           {showNewCategoryInput && (
             <>
               <Input
@@ -203,14 +218,14 @@ const AssetForm: React.FC<AssetFormProps> = (props) => {
                 id="newCategoryName"
                 value={newCategoryName}
                 onChange={(e) => setNewCategoryName(e.target.value)}
-                required
+                required // Torna esses campos obrigatórios quando visíveis
               />
               <Input
                 label="Prefixo da Nova Categoria (Ex: PC, NOTE)"
                 id="newCategoryPrefix"
                 value={newCategoryPrefix}
-                onChange={(e) => setNewCategoryPrefix(e.target.value.toUpperCase())} // Prefixo em maiúsculas
-                required
+                onChange={(e) => setNewCategoryPrefix(e.target.value.toUpperCase().trim())}
+                required // Torna esses campos obrigatórios quando visíveis
               />
             </>
           )}

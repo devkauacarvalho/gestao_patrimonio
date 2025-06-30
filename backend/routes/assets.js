@@ -6,26 +6,42 @@ import db from '../db.js';
 // Rota para Categorias
 router.get("/categories", async (req, res, next) => {
   try {
-    const result = await db.query("SELECT * FROM categories ORDER BY name ASC");
+    // Retorna também o sequence_name
+    const result = await db.query("SELECT id, name, prefix, sequence_name FROM categories ORDER BY name ASC");
     res.json(result.rows);
   } catch (err) {
     next(err);
   }
 });
 
+// POST para adicionar uma nova categoria e sua sequência correspondente
 router.post("/categories", async (req, res, next) => {
   const { name, prefix } = req.body;
   if (!name || !prefix) {
     return res.status(400).json({ message: "Nome e Prefixo da categoria são obrigatórios." });
   }
+
+  const sequenceName = `${prefix.toLowerCase()}_seq`; // Cria o nome da sequência (ex: pc_seq)
+
   try {
+    // 1. Criar a nova sequência no banco de dados
+    // Usar IF NOT EXISTS para evitar erro se a sequência já existir
+    // É importante para evitar que tente criar uma sequência que já existe,
+    // o que pode acontecer se o frontend tentar adicionar uma categoria duplicada.
+    await db.query(`CREATE SEQUENCE IF NOT EXISTS ${sequenceName} START WITH 1 INCREMENT BY 1`);
+
+    // 2. Inserir a nova categoria na tabela categories, vinculando-a à sequência criada
     const result = await db.query(
-      "INSERT INTO categories (name, prefix) VALUES ($1, $2) RETURNING *",
-      [name, prefix]
+      "INSERT INTO categories (name, prefix, sequence_name) VALUES ($1, $2, $3) RETURNING *",
+      [name, prefix, sequenceName]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
-    next(err);
+    console.error("Erro ao adicionar categoria ou sequência:", err.message); // Log para depuração
+    if (err.code === '23505') { // Código de erro para violação de unicidade (duplicate key)
+        return res.status(409).json({ message: "Nome ou Prefixo da categoria já existe." });
+    }
+    next(err); // Passa outros erros para o middleware de tratamento de erros
   }
 });
 
@@ -33,7 +49,7 @@ router.post("/categories", async (req, res, next) => {
 router.get("/", async (req, res, next) => {
   try {
     const result = await db.query(`
-      SELECT a.*, c.name as category_name, c.prefix as category_prefix
+      SELECT a.*, c.name as category_name, c.prefix as category_prefix, c.sequence_name
       FROM assets a
       LEFT JOIN categories c ON a.category_id = c.id
       ORDER BY a.id ASC
@@ -49,7 +65,7 @@ router.get("/:id", async (req, res, next) => {
   const { id } = req.params;
   try {
     const assetResult = await db.query(`
-      SELECT a.*, c.name as category_name, c.prefix as category_prefix
+      SELECT a.*, c.name as category_name, c.prefix as category_prefix, c.sequence_name
       FROM assets a
       LEFT JOIN categories c ON a.category_id = c.id
       WHERE a.id = $1
@@ -78,18 +94,21 @@ router.post("/", async (req, res, next) => {
   }
 
   try {
-    // Obter o prefixo da categoria
-    const categoryResult = await db.query("SELECT prefix FROM categories WHERE id = $1", [category_id]);
+    // 1. Obter o prefixo e o nome da sequência da categoria selecionada
+    const categoryResult = await db.query("SELECT prefix, sequence_name FROM categories WHERE id = $1", [category_id]);
     if (categoryResult.rows.length === 0) {
       return res.status(400).json({ message: "Categoria selecionada inválida." });
     }
-    const categoryPrefix = categoryResult.rows[0].prefix;
+    // Desestruturar para obter 'prefix' e 'sequence_name'
+    const { prefix: categoryPrefix, sequence_name: categorySequenceName } = categoryResult.rows[0];
 
-    // Gerar o próximo ID sequencial da sequência geral de ativos
-    const seqResult = await db.query("SELECT nextval('asset_id_seq') as next_num");
+    // 2. Gerar o próximo ID sequencial usando a sequência ESPECÍFICA DA CATEGORIA
+    // A função nextval() aceita o nome da sequência como string
+    const seqResult = await db.query(`SELECT nextval('${categorySequenceName}') as next_num`);
     const nextNum = seqResult.rows[0].next_num;
-    // Formatar o ID com base no prefixo da categoria e 5 dígitos
-    const newId = `MAKEDIST-<span class="math-inline">\{categoryPrefix\}\-</span>{String(nextNum).padStart(5, '0')}`;
+
+    // 3. Formatar o ID com base no prefixo da categoria e 5 dígitos
+    const newId = `MAKEDIST-${categoryPrefix}-${String(nextNum).padStart(5, '0')}`;
 
     const result = await db.query(
       `INSERT INTO assets (id, nome, descricao, numero_serie, modelo, localizacao, status, data_aquisicao, info_garantia, ultima_atualizacao, utilizador, category_id)
@@ -98,7 +117,11 @@ router.post("/", async (req, res, next) => {
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
-    next(err);
+    console.error("Erro ao adicionar ativo:", err.stack); // Log detalhado para debug
+    if (err.code === '23505') { // Código de erro para violação de unicidade (duplicate key)
+        return res.status(409).json({ message: "Erro: O ID gerado para este tipo de ativo já existe. Por favor, tente novamente. Se o problema persistir, pode ser necessário sincronizar a sequência de IDs para esta categoria." });
+    }
+    next(err); // Passa outros erros para o middleware de tratamento de erros
   }
 });
 
@@ -107,13 +130,11 @@ router.put("/:id", async (req, res, next) => {
   const { id } = req.params;
   const { nome, descricao, localizacao, status, utilizador, category_id } = req.body;
 
-  if (!nome || !status || !category_id) { // category_id também obrigatório
+  if (!nome || !status || !category_id) {
     return res.status(400).json({ message: "Nome, Status e Categoria são obrigatórios." });
   }
 
   try {
-    // Se a categoria for alterada, o ID NÃO muda (o ID é gerado na criação).
-    // Apenas o category_id é atualizado.
     const result = await db.query(
       "UPDATE assets SET nome = $1, descricao = $2, localizacao = $3, status = $4, utilizador = $5, category_id = $6, ultima_atualizacao = CURRENT_TIMESTAMP WHERE id = $7 RETURNING *",
       [nome, descricao, localizacao, status, utilizador, category_id, id]

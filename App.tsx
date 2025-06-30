@@ -1,12 +1,14 @@
 // App.tsx
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, JSX } from 'react';
 import { Routes, Route, useNavigate, useParams } from 'react-router-dom';
-import { Asset, HistoryEntry, Category } from './types';
+import { Asset, HistoryEntry, Category, User } from './types';
 import { APP_NAME, ACCENT_COLOR_CLASS_BG } from './constants';
 import HomeScreen from './components/screens/HomeScreen';
 import ScanScreen from './components/screens/ScanScreen';
 import AssetListScreen from './components/screens/AssetListScreen';
 import AssetDetailScreen from './components/screens/AssetDetailScreen';
+import LoginScreen from './components/screens/LoginScreen';
+import Button from './components/ui/Button';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -15,6 +17,8 @@ const App: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   const navigate = useNavigate();
 
@@ -23,7 +27,6 @@ const App: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      // Usar API_BASE_URL
       const response = await fetch(`${API_BASE_URL}/api/assets`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -43,7 +46,6 @@ const App: React.FC = () => {
   const fetchCategories = useCallback(async () => {
     setError(null);
     try {
-      // Usar API_BASE_URL
       const response = await fetch(`${API_BASE_URL}/api/assets/categories`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -58,6 +60,13 @@ const App: React.FC = () => {
 
 
   useEffect(() => {
+    // Tentar carregar o token e o usuário do localStorage ao iniciar
+    const storedToken = localStorage.getItem('accessToken');
+    const storedUser = localStorage.getItem('currentUser');
+    if (storedToken && storedUser) {
+      setCurrentUser(JSON.parse(storedUser));
+      // Poderia validar o token com o backend aqui para maior segurança
+    }
     fetchAssets();
     fetchCategories();
   }, [fetchAssets, fetchCategories]);
@@ -77,19 +86,66 @@ const App: React.FC = () => {
     }
   };
 
+  // Função para fazer login
+  const handleLogin = useCallback(async (username: string, password: string): Promise<boolean> => {
+    setAuthError(null);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username, password }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        setAuthError(errorData.message || "Erro de login desconhecido.");
+        return false;
+      }
+
+      const data = await response.json();
+      localStorage.setItem('accessToken', data.accessToken);
+      localStorage.setItem('currentUser', JSON.stringify(data.user));
+      setCurrentUser(data.user);
+      return true;
+    } catch (e: any) {
+      console.error("Erro ao realizar login:", e);
+      setAuthError("Falha na conexão com o servidor. Tente novamente.");
+      return false;
+    }
+  }, [API_BASE_URL]);
+
+  // Função para fazer logout
+  const handleLogout = useCallback(() => {
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('currentUser');
+    setCurrentUser(null);
+    navigate('/login'); // Redireciona para a tela de login
+  }, [navigate]);
+
+
+  // Helper para obter headers de autorização
+  const getAuthHeaders = useCallback(() => {
+    const token = localStorage.getItem('accessToken');
+    return token ? { 'Authorization': `Bearer ${token}` } : {};
+  }, []);
+
+
   const updateAsset = useCallback(async (updatedAssetData: Omit<Asset, 'historico' | 'ultima_atualizacao'>) => {
     setError(null);
     try {
-      // Usar API_BASE_URL
       const response = await fetch(`${API_BASE_URL}/api/assets/${updatedAssetData.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-        },
+          ...getAuthHeaders(),
+        } as HeadersInit, // <--- ADICIONADO: cast para HeadersInit
         body: JSON.stringify(updatedAssetData),
       });
 
       if (!response.ok) {
+        if (response.status === 401 || response.status === 403) { handleLogout(); } // Se não autorizado, faz logout
         const errorData = await response.json();
         throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
       }
@@ -109,21 +165,22 @@ const App: React.FC = () => {
       setError(`Falha ao atualizar ativo: ${e.message}`);
       return false;
     }
-  }, [API_BASE_URL]);
+  }, [API_BASE_URL, getAuthHeaders, handleLogout]);
 
   const addAsset = useCallback(async (newAssetData: Omit<Asset, 'historico' | 'ultima_atualizacao' | 'id' | 'id_interno' | 'atualizado_por'>) => {
     setError(null);
     try {
-      // Usar API_BASE_URL
       const response = await fetch(`${API_BASE_URL}/api/assets`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-        },
+          ...getAuthHeaders(),
+        } as HeadersInit, // <--- ADICIONADO: cast para HeadersInit
         body: JSON.stringify(newAssetData),
       });
 
       if (!response.ok) {
+        if (response.status === 401 || response.status === 403) { handleLogout(); } // Se não autorizado, faz logout
         const errorData = await response.json();
         throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
       }
@@ -137,49 +194,51 @@ const App: React.FC = () => {
       setError(`Falha ao adicionar ativo: ${e.message}`);
       return false;
     }
-  }, [API_BASE_URL]);
+  }, [API_BASE_URL, getAuthHeaders, handleLogout]);
 
-  // Nova função para adicionar categoria
   const addCategory = useCallback(async (categoryName: string, categoryPrefix: string) => {
     setError(null);
     try {
-      // Usar API_BASE_URL
       const response = await fetch(`${API_BASE_URL}/api/assets/categories`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-        },
+          ...getAuthHeaders(),
+        } as HeadersInit, // <--- ADICIONADO: cast para HeadersInit
         body: JSON.stringify({ name: categoryName, prefix: categoryPrefix }),
       });
 
       if (!response.ok) {
+        if (response.status === 401 || response.status === 403) { handleLogout(); } // Se não autorizado, faz logout
         const errorData = await response.json();
         throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
       }
       const newCategory: Category = await response.json();
       setCategories(prevCategories => [...prevCategories, newCategory]);
       return newCategory;
-    } catch (e: any) {
+    }
+    catch (e: any) {
       console.error("Erro ao adicionar categoria:", e);
       setError(`Falha ao adicionar categoria: ${e.message}`);
       return null;
     }
-  }, [API_BASE_URL]);
+  }, [API_BASE_URL, getAuthHeaders, handleLogout]);
 
 
   const addHistoryEntry = useCallback(async (assetId: string, entryData: Omit<HistoryEntry, 'id' | 'timestamp' | 'asset_id'>) => {
     setError(null);
     try {
-      // Usar API_BASE_URL
       const response = await fetch(`${API_BASE_URL}/api/assets/${assetId}/history`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-        },
+          ...getAuthHeaders(),
+        } as HeadersInit, // <--- ADICIONADO: cast para HeadersInit
         body: JSON.stringify(entryData),
       });
 
       if (!response.ok) {
+        if (response.status === 401 || response.status === 403) { handleLogout(); } // Se não autorizado, faz logout
         const errorData = await response.json();
         throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
       }
@@ -203,57 +262,83 @@ const App: React.FC = () => {
       setError(`Falha ao adicionar histórico: ${e.message}`);
       return false;
     }
-  }, [API_BASE_URL]);
+  }, [API_BASE_URL, getAuthHeaders, handleLogout]);
 
 
   const deleteAsset = useCallback(async (assetId: string) => {
     setError(null);
     try {
-      // Usar API_BASE_URL
       const response = await fetch(`${API_BASE_URL}/api/assets/${assetId}`, {
         method: 'DELETE',
+        headers: {
+          ...getAuthHeaders(),
+        } as HeadersInit, // <--- ADICIONADO: cast para HeadersInit
       });
 
-      if (response.ok) {
-        const responseText = await response.text();
-        if (responseText) {
-          try {
-            const deletedAssetFromServer = JSON.parse(responseText);
-            console.log("Ativo excluído:", deletedAssetFromServer.deletedAsset);
-          } catch (parseError) {
-            console.warn("Resposta não é JSON válido, mas a exclusão foi bem-sucedida:", responseText);
-          }
-        } else {
-          console.log("Ativo excluído com sucesso (resposta vazia).");
-        }
-        setAssets(prevAssets => prevAssets.filter(asset => asset.id !== assetId));
-        return true;
-      } else {
-        const errorText = await response.text();
-        let errorMessage = `HTTP error! status: ${response.status}`;
-        try {
-          const errorData = JSON.parse(errorText);
-          errorMessage = errorData.message || errorMessage;
-        } catch (parseError) {
-          errorMessage = errorText || errorMessage;
-        }
-        throw new Error(errorMessage);
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) { handleLogout(); } // Se não autorizado, faz logout
+        const errorData = await response.json();
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
       }
+
+      const responseText = await response.text();
+      if (responseText) {
+        try {
+          const deletedAssetFromServer = JSON.parse(responseText);
+          console.log("Ativo excluído:", deletedAssetFromServer.deletedAsset);
+        } catch (parseError) {
+          console.warn("Resposta não é JSON válido, mas a exclusão foi bem-sucedida:", responseText);
+        }
+      } else {
+        console.log("Ativo excluído com sucesso (resposta vazia).");
+      }
+      setAssets(prevAssets => prevAssets.filter(asset => asset.id !== assetId));
+      return true;
     } catch (e: any) {
       console.error("Erro ao excluir ativo:", e);
       setError(`Falha ao excluir ativo: ${e.message}`);
       return false;
     }
-  }, [API_BASE_URL]);
+  }, [API_BASE_URL, getAuthHeaders, handleLogout]);
+
 
   if (loading) {
     return <div className="flex justify-center items-center min-h-screen">Carregando...</div>;
   }
 
+  // Componente privado que requer autenticação
+  const PrivateRoute = ({ children, roles }: { children: JSX.Element; roles?: string[] }) => {
+    // Removido o useEffect para redirecionar para login, pois o Router v6+ lida com isso.
+    // O redirecionamento agora é feito no useEffect abaixo, após verificar o currentUser.
+    if (!currentUser) {
+      // Usamos uma "chave" para forçar o useEffect a rodar apenas uma vez quando o currentUser muda
+      // e para evitar loops de redirecionamento.
+      useEffect(() => {
+        // Apenas redireciona se já tentou carregar e não há usuário
+        if (!loading && !currentUser) { // Garante que não redireciona enquanto carrega
+            navigate('/login', { replace: true });
+        }
+      }, [currentUser, navigate, loading]);
+      return null; // Não renderiza nada enquanto redireciona
+    }
+
+    if (roles && !roles.includes(currentUser.role)) {
+      useEffect(() => { navigate('/', { replace: true }); alert("Acesso negado. Você não tem permissão para acessar esta página."); }, [navigate]);
+      return null;
+    }
+    return children;
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
       <header className={`${ACCENT_COLOR_CLASS_BG} text-white p-4 shadow-md sticky top-0 z-50`}>
         <h1 className="text-xl font-semibold text-center">{APP_NAME}</h1>
+        {currentUser && (
+          <div className="absolute right-4 top-4 flex items-center space-x-2 text-sm">
+            <span className="font-medium">Olá, {currentUser.username} ({currentUser.role})</span>
+            <Button variant="secondary" size="sm" onClick={handleLogout}>Sair</Button>
+          </div>
+        )}
       </header>
 
       <main className="flex-grow container mx-auto p-4 sm:p-6 lg:p-8">
@@ -267,38 +352,55 @@ const App: React.FC = () => {
           </div>
         )}
         <Routes>
-          <Route path="/" element={<HomeScreen onAddAsset={() => navigate('/add-asset')} />} />
-          <Route path="/scan" element={<ScanScreen onScan={handleScan} />} />
-          <Route path="/assets" element={<AssetListScreen assets={assets} />} />
+          {/* Rota de Login (Pública) */}
+          <Route
+            path="/login"
+            element={
+              <LoginScreen
+                onLogin={handleLogin}
+                errorMessage={authError}
+                clearError={() => setAuthError(null)}
+              />
+            }
+          />
+
+          {/* Rotas Protegidas (Exigem Login) */}
+          <Route path="/" element={<PrivateRoute><HomeScreen onAddAsset={() => navigate('/add-asset')} /></PrivateRoute>} />
+          <Route path="/scan" element={<PrivateRoute><ScanScreen onScan={handleScan} /></PrivateRoute>} />
+          <Route path="/assets" element={<PrivateRoute><AssetListScreen assets={assets} categories={categories} /></PrivateRoute>} />
           <Route
             path="/asset/:assetId"
             element={
-              // Remover a função de seta extra, passar o JSX AssetDetailScreen diretamente
-              <AssetDetailScreen
-                onUpdateAsset={updateAsset}
-                onAddHistoryEntry={addHistoryEntry}
-                onDeleteAsset={deleteAsset}
-                apiBaseUrl={API_BASE_URL}
-                categories={categories}
-                onAddCategory={addCategory}
-              />
+              <PrivateRoute>
+                <AssetDetailScreen
+                  onUpdateAsset={updateAsset}
+                  onAddHistoryEntry={addHistoryEntry}
+                  onDeleteAsset={deleteAsset}
+                  apiBaseUrl={API_BASE_URL}
+                  categories={categories}
+                  onAddCategory={addCategory}
+                />
+              </PrivateRoute>
             }
           />
           <Route
             path="/add-asset"
             element={
-              // Remover a função de seta extra aqui também
-              <AssetDetailScreen
-                mode="addAsset"
-                onAddAsset={addAsset}
-                onUpdateAsset={updateAsset}
-                onAddHistoryEntry={addHistoryEntry}
-                apiBaseUrl={API_BASE_URL}
-                categories={categories}
-                onAddCategory={addCategory}
-              />
+              <PrivateRoute>
+                <AssetDetailScreen
+                  mode="addAsset"
+                  onAddAsset={addAsset}
+                  onUpdateAsset={updateAsset}
+                  onAddHistoryEntry={addHistoryEntry}
+                  apiBaseUrl={API_BASE_URL}
+                  categories={categories}
+                  onAddCategory={addCategory}
+                />
+              </PrivateRoute>
             }
           />
+          {/* TODO: Adicionar rotas para gerenciamento de usuários (apenas admin) */}
+          {/* <Route path="/users" element={<PrivateRoute roles={['admin']}> <UserManagementScreen /> </PrivateRoute>} /> */}
         </Routes>
       </main>
       <footer className="text-center p-4 text-sm text-slate-500 border-t border-slate-200">

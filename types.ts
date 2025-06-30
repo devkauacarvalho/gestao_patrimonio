@@ -1,23 +1,17 @@
 // types.ts
 export enum AssetStatus {
   EmOperacao = "Em Operação",
-  EmManutencao = "Em Manutencao",
+  EmManutencao = "Em Manutenção",
   ForaDeUso = "Fora de Uso",
-  AguardandoPecas = "Aguardando Pecas",
+  AguardandoPecas = "Aguardando Peças",
 }
 
 export enum HistoryEventType {
-  ManutencaoCorretiva = "Manutencao Corretiva",
-  ManutencaoPreventiva = "Manutencao Preventiva",
-  MudancaStatus = "Mudanca Status",
-  MudancaLocalizacao = "Mudanca Localizacao",
-  Observacao = "Observacao",
-}
-
-export interface Category {
-  id: number;
-  name: string;
-  prefix: string; // Ex: "PC", "NOTE"
+  ManutencaoCorretiva = "Manutenção Corretiva",
+  ManutencaoPreventiva = "Manutenção Preventiva",
+  MudancaStatus = "Mudança Status",
+  MudancaLocalizacao = "Mudança Localização",
+  Observacao = "Observação",
 }
 
 export interface HistoryEntry {
@@ -26,6 +20,20 @@ export interface HistoryEntry {
   tipo_evento: HistoryEventType;
   descricao: string;
   responsavel?: string;
+  user_id?: number; // NOVO: ID do usuário que fez a alteração
+}
+
+export interface Category {
+  id: number;
+  name: string;
+  prefix: string;
+  sequence_name?: string; // NOVO: Nome da sequência para geração de ID
+}
+
+export interface User { // NOVA INTERFACE: Para dados do usuário logado
+  id: number;
+  username: string;
+  role: string; // Ex: 'admin', 'user'
 }
 
 export interface Asset {
@@ -42,7 +50,7 @@ export interface Asset {
   atualizado_por?: string;
   historico: HistoryEntry[];
   utilizador?: string;
-  category_id?: number; // NOVO CAMPO: ID da categoria
-  category_name?: string; // NOVO CAMPO (opcional, para exibição)
-  category_prefix?: string; // NOVO CAMPO (opcional, para geração de ID)
+  category_id?: number;
+  category_name?: string;
+  category_prefix?: string;
 }

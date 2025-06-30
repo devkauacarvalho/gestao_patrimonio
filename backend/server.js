@@ -1,8 +1,12 @@
+// backend/server.js
 import express from 'express';
 import cors from 'cors';
 import db from './db.js';
 
 import 'dotenv/config';
+
+import assetsRouter from "./routes/assets.js";
+import authRoutes from "./routes/auth.js"; // Importa as novas rotas de autenticação
 
 const app = express();
 const port = process.env.BACKEND_PORT || 3001;
@@ -10,16 +14,24 @@ const port = process.env.BACKEND_PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
+// Adiciona JWT_SECRET às variáveis de ambiente do Node.js
+// Em produção, certifique-se de que isso está no seu .env real
+if (!process.env.JWT_SECRET) {
+  console.warn("JWT_SECRET não definido. Usando valor padrão. (Em produção, defina uma variável de ambiente forte!)");
+  process.env.JWT_SECRET = "sua_chave_secreta_muito_forte_e_secreta"; // Usar o mesmo valor do auth.js
+}
+
+
 app.get("/", (req, res) => {
   res.send("API de Gestão de Património está a funcionar!");
 });
 
-import assetsRouter from "./routes/assets.js";
 app.use("/api/assets", assetsRouter);
+app.use("/api/auth", authRoutes); // Adiciona as rotas de autenticação
 
-// ESTA É A SEÇÃO CRÍTICA QUE PRECISA ESTAR CORRETA
+// ESTA É A SEÇÃO CRÍTICA QUE PRECISA ESTAR CORRETA (middleware de tratamento de erros)
 app.use((err, req, res, next) => {
-  console.error(err.stack); // ISSO VAI MOSTRAR O ERRO REAL NO SEU TERMINAL DE BACKEND
+  console.error(err.stack);
   res.status(500).json({ message: err.message || "Ocorreu um erro interno no servidor!" });
 });
 
