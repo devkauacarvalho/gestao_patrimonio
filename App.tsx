@@ -1,13 +1,15 @@
 // App.tsx
 import React, { useState, useCallback, useEffect, JSX } from 'react';
-import { Routes, Route, useNavigate, useParams } from 'react-router-dom';
+import { Routes, Route, useNavigate } from 'react-router-dom';
 import { Asset, HistoryEntry, Category, User } from './types';
 import { APP_NAME, ACCENT_COLOR_CLASS_BG } from './constants';
+import { IconAdminPanel } from './constants.tsx';
 import HomeScreen from './components/screens/HomeScreen';
 import ScanScreen from './components/screens/ScanScreen';
 import AssetListScreen from './components/screens/AssetListScreen';
 import AssetDetailScreen from './components/screens/AssetDetailScreen';
 import LoginScreen from './components/screens/LoginScreen';
+import AdminScreen from './components/screens/AdminScreen'; // Importa a tela Admin
 import Button from './components/ui/Button';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
@@ -40,7 +42,7 @@ const App: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [API_BASE_URL]);
+  }, []);
 
   // Função para buscar categorias
   const fetchCategories = useCallback(async () => {
@@ -56,8 +58,7 @@ const App: React.FC = () => {
       console.error("Erro ao buscar categorias:", e);
       setError("Falha ao carregar categorias.");
     }
-  }, [API_BASE_URL]);
-
+  }, []);
 
   useEffect(() => {
     // Tentar carregar o token e o usuário do localStorage ao iniciar
@@ -65,19 +66,13 @@ const App: React.FC = () => {
     const storedUser = localStorage.getItem('currentUser');
     if (storedToken && storedUser) {
       setCurrentUser(JSON.parse(storedUser));
-      // Poderia validar o token com o backend aqui para maior segurança
     }
     fetchAssets();
     fetchCategories();
   }, [fetchAssets, fetchCategories]);
 
-
-  const findAssetById = useCallback((id: string): Asset | undefined => {
-    return assets.find(asset => asset.id.toLowerCase() === id.toLowerCase());
-  }, [assets]);
-
   const handleScan = (id: string) => {
-    const asset = findAssetById(id);
+    const asset = assets.find(asset => asset.id.toLowerCase() === id.toLowerCase());
     if (asset) {
       navigate(`/asset/${asset.id}`);
     } else {
@@ -114,23 +109,25 @@ const App: React.FC = () => {
       setAuthError("Falha na conexão com o servidor. Tente novamente.");
       return false;
     }
-  }, [API_BASE_URL]);
+  }, []);
 
   // Função para fazer logout
   const handleLogout = useCallback(() => {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('currentUser');
     setCurrentUser(null);
-    navigate('/login'); // Redireciona para a tela de login
+    navigate('/login');
   }, [navigate]);
 
-
   // Helper para obter headers de autorização
-  const getAuthHeaders = useCallback(() => {
+  // CORRIGIDO: Adicionado o tipo de retorno explícito para resolver o erro do TypeScript.
+  const getAuthHeaders = useCallback((): Record<string, string> => {
     const token = localStorage.getItem('accessToken');
-    return token ? { 'Authorization': `Bearer ${token}` } : {};
+    if (token) {
+        return { 'Authorization': `Bearer ${token}` };
+    }
+    return {};
   }, []);
-
 
   const updateAsset = useCallback(async (updatedAssetData: Omit<Asset, 'historico' | 'ultima_atualizacao'>) => {
     setError(null);
@@ -140,12 +137,12 @@ const App: React.FC = () => {
         headers: {
           'Content-Type': 'application/json',
           ...getAuthHeaders(),
-        } as HeadersInit, // <--- ADICIONADO: cast para HeadersInit
+        } as HeadersInit,
         body: JSON.stringify(updatedAssetData),
       });
 
       if (!response.ok) {
-        if (response.status === 401 || response.status === 403) { handleLogout(); } // Se não autorizado, faz logout
+        if (response.status === 401 || response.status === 403) { handleLogout(); }
         const errorData = await response.json();
         throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
       }
@@ -165,7 +162,7 @@ const App: React.FC = () => {
       setError(`Falha ao atualizar ativo: ${e.message}`);
       return false;
     }
-  }, [API_BASE_URL, getAuthHeaders, handleLogout]);
+  }, [getAuthHeaders, handleLogout]);
 
   const addAsset = useCallback(async (newAssetData: Omit<Asset, 'historico' | 'ultima_atualizacao' | 'id' | 'id_interno' | 'atualizado_por'>) => {
     setError(null);
@@ -175,12 +172,12 @@ const App: React.FC = () => {
         headers: {
           'Content-Type': 'application/json',
           ...getAuthHeaders(),
-        } as HeadersInit, // <--- ADICIONADO: cast para HeadersInit
+        } as HeadersInit,
         body: JSON.stringify(newAssetData),
       });
 
       if (!response.ok) {
-        if (response.status === 401 || response.status === 403) { handleLogout(); } // Se não autorizado, faz logout
+        if (response.status === 401 || response.status === 403) { handleLogout(); }
         const errorData = await response.json();
         throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
       }
@@ -194,7 +191,7 @@ const App: React.FC = () => {
       setError(`Falha ao adicionar ativo: ${e.message}`);
       return false;
     }
-  }, [API_BASE_URL, getAuthHeaders, handleLogout]);
+  }, [getAuthHeaders, handleLogout]);
 
   const addCategory = useCallback(async (categoryName: string, categoryPrefix: string) => {
     setError(null);
@@ -204,12 +201,12 @@ const App: React.FC = () => {
         headers: {
           'Content-Type': 'application/json',
           ...getAuthHeaders(),
-        } as HeadersInit, // <--- ADICIONADO: cast para HeadersInit
+        } as HeadersInit,
         body: JSON.stringify({ name: categoryName, prefix: categoryPrefix }),
       });
 
       if (!response.ok) {
-        if (response.status === 401 || response.status === 403) { handleLogout(); } // Se não autorizado, faz logout
+        if (response.status === 401 || response.status === 403) { handleLogout(); }
         const errorData = await response.json();
         throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
       }
@@ -222,7 +219,7 @@ const App: React.FC = () => {
       setError(`Falha ao adicionar categoria: ${e.message}`);
       return null;
     }
-  }, [API_BASE_URL, getAuthHeaders, handleLogout]);
+  }, [getAuthHeaders, handleLogout]);
 
 
   const addHistoryEntry = useCallback(async (assetId: string, entryData: Omit<HistoryEntry, 'id' | 'timestamp' | 'asset_id'>) => {
@@ -233,12 +230,12 @@ const App: React.FC = () => {
         headers: {
           'Content-Type': 'application/json',
           ...getAuthHeaders(),
-        } as HeadersInit, // <--- ADICIONADO: cast para HeadersInit
+        } as HeadersInit,
         body: JSON.stringify(entryData),
       });
 
       if (!response.ok) {
-        if (response.status === 401 || response.status === 403) { handleLogout(); } // Se não autorizado, faz logout
+        if (response.status === 401 || response.status === 403) { handleLogout(); }
         const errorData = await response.json();
         throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
       }
@@ -262,7 +259,7 @@ const App: React.FC = () => {
       setError(`Falha ao adicionar histórico: ${e.message}`);
       return false;
     }
-  }, [API_BASE_URL, getAuthHeaders, handleLogout]);
+  }, [getAuthHeaders, handleLogout]);
 
 
   const deleteAsset = useCallback(async (assetId: string) => {
@@ -272,11 +269,11 @@ const App: React.FC = () => {
         method: 'DELETE',
         headers: {
           ...getAuthHeaders(),
-        } as HeadersInit, // <--- ADICIONADO: cast para HeadersInit
+        } as HeadersInit,
       });
 
       if (!response.ok) {
-        if (response.status === 401 || response.status === 403) { handleLogout(); } // Se não autorizado, faz logout
+        if (response.status === 401 || response.status === 403) { handleLogout(); }
         const errorData = await response.json();
         throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
       }
@@ -299,7 +296,7 @@ const App: React.FC = () => {
       setError(`Falha ao excluir ativo: ${e.message}`);
       return false;
     }
-  }, [API_BASE_URL, getAuthHeaders, handleLogout]);
+  }, [getAuthHeaders, handleLogout]);
 
 
   if (loading) {
@@ -308,18 +305,13 @@ const App: React.FC = () => {
 
   // Componente privado que requer autenticação
   const PrivateRoute = ({ children, roles }: { children: JSX.Element; roles?: string[] }) => {
-    // Removido o useEffect para redirecionar para login, pois o Router v6+ lida com isso.
-    // O redirecionamento agora é feito no useEffect abaixo, após verificar o currentUser.
     if (!currentUser) {
-      // Usamos uma "chave" para forçar o useEffect a rodar apenas uma vez quando o currentUser muda
-      // e para evitar loops de redirecionamento.
       useEffect(() => {
-        // Apenas redireciona se já tentou carregar e não há usuário
-        if (!loading && !currentUser) { // Garante que não redireciona enquanto carrega
+        if (!loading && !currentUser) {
             navigate('/login', { replace: true });
         }
       }, [currentUser, navigate, loading]);
-      return null; // Não renderiza nada enquanto redireciona
+      return null;
     }
 
     if (roles && !roles.includes(currentUser.role)) {
@@ -334,8 +326,20 @@ const App: React.FC = () => {
       <header className={`${ACCENT_COLOR_CLASS_BG} text-white p-4 shadow-md sticky top-0 z-50`}>
         <h1 className="text-xl font-semibold text-center">{APP_NAME}</h1>
         {currentUser && (
-          <div className="absolute right-4 top-4 flex items-center space-x-2 text-sm">
-            <span className="font-medium">Olá, {currentUser.username} ({currentUser.role})</span>
+          <div className="absolute right-4 top-4 flex items-center space-x-3 text-sm">
+            <span className="font-medium hidden sm:inline">Olá, {currentUser.username} ({currentUser.role})</span>
+
+            {currentUser.role === 'admin' && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => navigate('/admin')}
+                leftIcon={<IconAdminPanel />}
+              >
+                Painel Admin
+              </Button>
+            )}
+
             <Button variant="secondary" size="sm" onClick={handleLogout}>Sair</Button>
           </div>
         )}
@@ -352,7 +356,6 @@ const App: React.FC = () => {
           </div>
         )}
         <Routes>
-          {/* Rota de Login (Pública) */}
           <Route
             path="/login"
             element={
@@ -363,8 +366,6 @@ const App: React.FC = () => {
               />
             }
           />
-
-          {/* Rotas Protegidas (Exigem Login) */}
           <Route path="/" element={<PrivateRoute><HomeScreen onAddAsset={() => navigate('/add-asset')} /></PrivateRoute>} />
           <Route path="/scan" element={<PrivateRoute><ScanScreen onScan={handleScan} /></PrivateRoute>} />
           <Route path="/assets" element={<PrivateRoute><AssetListScreen assets={assets} categories={categories} /></PrivateRoute>} />
@@ -399,8 +400,18 @@ const App: React.FC = () => {
               </PrivateRoute>
             }
           />
-          {/* TODO: Adicionar rotas para gerenciamento de usuários (apenas admin) */}
-          {/* <Route path="/users" element={<PrivateRoute roles={['admin']}> <UserManagementScreen /> </PrivateRoute>} /> */}
+          
+          <Route path="/admin" element={
+            <PrivateRoute roles={['admin']}>
+              <AdminScreen
+                apiBaseUrl={API_BASE_URL}
+                getAuthHeaders={getAuthHeaders}
+                handleLogout={handleLogout}
+                currentUser={currentUser}
+              />
+            </PrivateRoute>
+          } />
+
         </Routes>
       </main>
       <footer className="text-center p-4 text-sm text-slate-500 border-t border-slate-200">
