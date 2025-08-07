@@ -1,8 +1,6 @@
-// backend/routes/assets.js
 import express from 'express';
 const router = express.Router();
 import db from '../db.js';
-// NOVO: Importa os middlewares de autenticação e autorização
 import { authenticateToken, authorizeAdmin } from './auth.js';
 
 // --- ROTAS DE CATEGORIAS ---

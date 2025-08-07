@@ -1,4 +1,3 @@
-// components/features/UserManagement.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { User } from '../../types';
 import Button from '../ui/Button';
@@ -24,7 +23,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ apiBaseUrl, getAuthHead
   // Estados para os modais
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false); // NOVO: Estado para modal de adicionar
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false); 
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
   // Estados para formulário de edição
@@ -88,7 +87,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ apiBaseUrl, getAuthHead
     setIsDeleteModalOpen(false);
     setIsAddModalOpen(false);
     setSelectedUser(null);
-    setError(null); // Limpa erros ao fechar modal
+    setError(null);
   };
 
   const handleUpdateUser = async (e: React.FormEvent) => {
@@ -154,7 +153,6 @@ const UserManagement: React.FC<UserManagementProps> = ({ apiBaseUrl, getAuthHead
     }
   };
 
-  // NOVO: Função para adicionar usuário
   const handleAddNewUser = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -178,7 +176,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ apiBaseUrl, getAuthHead
       }
 
       closeModal();
-      fetchUsers(); // Recarrega a lista de usuários
+      fetchUsers(); 
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -223,7 +221,6 @@ const UserManagement: React.FC<UserManagementProps> = ({ apiBaseUrl, getAuthHead
         </table>
       </div>
 
-      {/* Modal de Adicionar Usuário */}
       <Modal isOpen={isAddModalOpen} onClose={closeModal} title="Adicionar Novo Usuário">
         <form onSubmit={handleAddNewUser} className="space-y-4">
           <Input label="Nome de Usuário" id="addUsername" value={addUsername} onChange={(e) => setAddUsername(e.target.value)} required />
@@ -247,7 +244,6 @@ const UserManagement: React.FC<UserManagementProps> = ({ apiBaseUrl, getAuthHead
         </form>
       </Modal>
 
-      {/* Modal de Edição */}
       {selectedUser && (
         <Modal isOpen={isEditModalOpen} onClose={closeModal} title={`Editar Usuário: ${selectedUser.username}`}>
           <form onSubmit={handleUpdateUser} className="space-y-4">
@@ -272,7 +268,6 @@ const UserManagement: React.FC<UserManagementProps> = ({ apiBaseUrl, getAuthHead
         </Modal>
       )}
 
-      {/* Modal de Exclusão */}
       {selectedUser && (
         <Modal isOpen={isDeleteModalOpen} onClose={closeModal} title="Confirmar Exclusão" size="sm">
           <p>Tem certeza que deseja excluir o usuário <span className="font-bold">{selectedUser.username}</span>?</p>

@@ -1,4 +1,3 @@
-// components/features/AssetListItem.tsx
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Asset, AssetStatus } from '../../types';

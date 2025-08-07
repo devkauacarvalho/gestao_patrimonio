@@ -1,4 +1,3 @@
-// components/features/CategoryManagement.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { Category } from '../../types';
 import Button from '../ui/Button';
@@ -182,7 +181,6 @@ const CategoryManagement: React.FC<CategoryManagementProps> = ({ apiBaseUrl, get
             </table>
         </div>
 
-        {/* Modal de Adicionar Categoria */}
         <Modal isOpen={isAddModalOpen} onClose={closeModal} title="Adicionar Nova Categoria">
             <form onSubmit={handleAddCategory} className="space-y-4">
                 <Input label="Nome da Categoria" id="addCategoryName" value={categoryName} onChange={(e) => setCategoryName(e.target.value)} required />
@@ -195,7 +193,6 @@ const CategoryManagement: React.FC<CategoryManagementProps> = ({ apiBaseUrl, get
             </form>
         </Modal>
 
-        {/* Modal de Editar Categoria */}
         {selectedCategory && (
             <Modal isOpen={isEditModalOpen} onClose={closeModal} title={`Editar Categoria: ${selectedCategory.name}`}>
                 <form onSubmit={handleEditCategory} className="space-y-4">
@@ -211,7 +208,6 @@ const CategoryManagement: React.FC<CategoryManagementProps> = ({ apiBaseUrl, get
             </Modal>
         )}
 
-        {/* Modal de Excluir Categoria */}
         {selectedCategory && (
             <Modal isOpen={isDeleteModalOpen} onClose={closeModal} title="Confirmar Exclusão">
                 <p>Tem certeza que deseja excluir a categoria <span className="font-bold">{selectedCategory.name}</span>?</p>

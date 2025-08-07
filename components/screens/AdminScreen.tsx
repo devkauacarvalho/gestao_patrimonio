@@ -1,4 +1,3 @@
-// components/screens/AdminScreen.tsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User } from '../../types';
@@ -15,11 +14,9 @@ interface AdminScreenProps {
   currentUser: User | null;
 }
 
-// Define os tipos para as visualizações do painel
 type AdminView = 'users' | 'categories' | 'qrcodes' | 'deleted';
 
 const AdminScreen: React.FC<AdminScreenProps> = (props) => {
-  // Estado para controlar qual tela está ativa no painel
   const [activeView, setActiveView] = useState<AdminView>('users');
   const navigate = useNavigate();
 
@@ -27,7 +24,7 @@ const AdminScreen: React.FC<AdminScreenProps> = (props) => {
     switch (activeView) {
       case 'users':
         return <UserManagement {...props} />;
-      case 'categories': // ALTERADO: Renderiza o novo componente
+      case 'categories': 
         return <CategoryManagement {...props} />;
       case 'qrcodes':
         return <Placeholder title="Visualização de QR Codes" />;

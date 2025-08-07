@@ -1,4 +1,3 @@
-// components/features/AssetForm.tsx
 import React, { useState, useEffect } from 'react';
 import { Asset, HistoryEntry, AssetStatus, HistoryEventType, Category } from '../../types';
 import { ASSET_STATUS_OPTIONS, HISTORY_EVENT_TYPE_OPTIONS } from '../../constants';
@@ -44,7 +43,6 @@ const AssetForm: React.FC<AssetFormProps> = (props) => {
   const [infoGarantia, setInfoGarantia] = useState(asset?.info_garantia || '');
   const [descricaoAsset, setDescricaoAsset] = useState(asset?.descricao || '');
   const [utilizador, setUtilizador] = useState(asset?.utilizador || '');
-  // selectedCategory agora pode ser string para o valor 'addNew'
   const [selectedCategory, setSelectedCategory] = useState<string>(asset?.category_id?.toString() || '');
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newCategoryPrefix, setNewCategoryPrefix] = useState('');

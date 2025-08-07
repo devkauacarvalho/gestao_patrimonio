@@ -1,4 +1,3 @@
-// components/screens/AssetDetailScreen.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Asset, HistoryEntry, AssetStatus, HistoryEventType, Category } from '../../types'; // Importar Category
@@ -15,7 +14,6 @@ import Textarea from '../ui/Textarea';
 import QRCodeGenerator from '../features/QRCodeGenerator';
 import { ASSET_STATUS_OPTIONS } from '../../constants';
 
-// Definição das props para visualização/edição de um ativo existente
 interface ViewEditAssetProps {
   mode?: 'view' | 'updateAsset';
   onUpdateAsset: (updatedAsset: Omit<Asset, 'historico' | 'ultima_atualizacao'>) => Promise<boolean>;
@@ -23,11 +21,10 @@ interface ViewEditAssetProps {
   onDeleteAsset: (assetId: string) => Promise<boolean>;
   assetId?: string;
   onAddAsset?: never;
-  categories: Category[]; // NOVO: Props para categorias
+  categories: Category[]; 
   onAddCategory: (name: string, prefix: string) => Promise<Category | null>; // NOVO: Props para adicionar categoria
 }
 
-// Definição das props para adicionar um novo ativo
 interface AddNewAssetProps {
   mode: 'addAsset';
   onAddAsset: (newAsset: Omit<Asset, 'historico' | 'ultima_atualizacao' | 'id' | 'id_interno' | 'atualizado_por'>) => Promise<boolean>;
@@ -35,11 +32,10 @@ interface AddNewAssetProps {
   onAddHistoryEntry?: (assetId: string, entry: Omit<HistoryEntry, 'id' | 'timestamp' | 'asset_id'>) => Promise<boolean>;
   onDeleteAsset?: never;
   assetId?: never;
-  categories: Category[]; // NOVO: Props para categorias
-  onAddCategory: (name: string, prefix: string) => Promise<Category | null>; // NOVO: Props para adicionar categoria
+  categories: Category[]; 
+  onAddCategory: (name: string, prefix: string) => Promise<Category | null>; 
 }
 
-// Tipo de props unificado para AssetDetailScreen
 type AssetDetailScreenProps = (ViewEditAssetProps | AddNewAssetProps) & {
   apiBaseUrl: string;
 };
@@ -55,7 +51,7 @@ const getStatusPillClasses = (status: AssetStatus | string) => {
 };
 
 const AssetDetailScreen: React.FC<AssetDetailScreenProps> = (props) => {
-  const { onUpdateAsset, onAddHistoryEntry, onAddAsset, apiBaseUrl, categories, onAddCategory } = props; // Desestruturar novas props
+  const { onUpdateAsset, onAddHistoryEntry, onAddAsset, apiBaseUrl, categories, onAddCategory } = props; 
   const onDeleteAsset = (props as ViewEditAssetProps).onDeleteAsset;
 
   const { assetId: paramAssetId } = useParams<{ assetId: string }>();
@@ -101,7 +97,7 @@ const AssetDetailScreen: React.FC<AssetDetailScreenProps> = (props) => {
         localizacao: data.localizacao,
         status: data.status,
         utilizador: data.utilizador,
-        category_id: data.category_id, // Popula category_id para edição
+        category_id: data.category_id, 
       });
     } catch (e: any) {
       console.error("Erro ao buscar detalhes do ativo:", e);
@@ -124,7 +120,7 @@ const AssetDetailScreen: React.FC<AssetDetailScreenProps> = (props) => {
         localizacao: asset.localizacao,
         status: asset.status,
         utilizador: asset.utilizador,
-        category_id: asset.category_id, // Popula category_id ao cancelar edição
+        category_id: asset.category_id, 
       });
     }
     setIsEditing(!isEditing);
@@ -151,7 +147,7 @@ const AssetDetailScreen: React.FC<AssetDetailScreenProps> = (props) => {
         modelo: asset.modelo,
         numero_serie: asset.numero_serie,
         utilizador: editFormData.utilizador !== undefined ? editFormData.utilizador : asset.utilizador,
-        category_id: editFormData.category_id !== undefined ? editFormData.category_id : asset.category_id, // Inclui category_id no payload
+        category_id: editFormData.category_id !== undefined ? editFormData.category_id : asset.category_id, 
     };
 
     const historyUpdates: Omit<HistoryEntry, 'id' | 'timestamp' | 'asset_id'>[] = [];
@@ -186,12 +182,12 @@ const AssetDetailScreen: React.FC<AssetDetailScreenProps> = (props) => {
         descricao: `Utilizador alterado de "${asset.utilizador || 'N/A'}" para "${updatePayload.utilizador || 'N/A'}".`
       });
     }
-    // NOVO: Histórico para mudança de categoria
+    
     if (updatePayload.category_id !== asset.category_id) {
         const oldCategoryName = categories.find(cat => cat.id === asset.category_id)?.name || 'N/A';
         const newCategoryName = categories.find(cat => cat.id === updatePayload.category_id)?.name || 'N/A';
         historyUpdates.push({
-            tipo_evento: HistoryEventType.Observacao, // Poderia ser 'MudancaCategoria' se criada
+            tipo_evento: HistoryEventType.Observacao, 
             descricao: `Categoria alterada de "${oldCategoryName}" para "${newCategoryName}".`
         });
     }
@@ -229,7 +225,7 @@ const AssetDetailScreen: React.FC<AssetDetailScreenProps> = (props) => {
         data_aquisicao: data.data_aquisicao,
         info_garantia: data.info_garantia,
         utilizador: data.utilizador,
-        category_id: data.category_id, // Inclui category_id no payload para criação
+        category_id: data.category_id, 
     };
     const success = await onAddAsset(payload);
 
@@ -336,7 +332,7 @@ const AssetDetailScreen: React.FC<AssetDetailScreenProps> = (props) => {
   const sortedHistory = asset ? [...(asset.historico || [])].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()) : [];
   const historyPreview = sortedHistory.slice(0, 3);
 
-  const assetCategoryName = asset?.category_name || 'N/A'; // Obter nome da categoria para exibição
+  const assetCategoryName = asset?.category_name || 'N/A'; 
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -384,25 +380,21 @@ const AssetDetailScreen: React.FC<AssetDetailScreenProps> = (props) => {
           <AssetForm mode="addAsset" onSubmit={handleAddNewAssetSubmit} onCancel={() => navigate(-1)} isSubmitting={isSubmitting} categories={categories} onAddCategory={onAddCategory} />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 text-sm">
-            {/* Campo Nome */}
             {isEditing ? (
               <Input label="Nome" name="nome" value={editFormData.nome || ''} onChange={handleInputChange} required />
             ) : (
               <InfoItem label="Nome" value={asset?.nome} />
             )}
-            {/* Campo Descrição */}
             {isEditing ? (
               <Textarea label="Descrição" name="descricao" value={editFormData.descricao || ''} onChange={handleInputChange} rows={3} />
             ) : (
               <InfoItem label="Descrição" value={asset?.descricao} />
             )}
-            {/* Campo Localização Atual */}
             {isEditing ? (
               <Input label="Localização Atual" name="localizacao" value={editFormData.localizacao || ''} onChange={handleInputChange} />
             ) : (
               <InfoItem label="Localização Atual" value={asset?.localizacao} />
             )}
-            {/* Campo Status */}
             {isEditing ? (
               <Select
                 label="Status"
@@ -421,13 +413,11 @@ const AssetDetailScreen: React.FC<AssetDetailScreenProps> = (props) => {
                 </span>
               </div>
             )}
-            {/* Campo Utilizador */}
             {isEditing ? (
               <Input label="Utilizador" name="utilizador" value={editFormData.utilizador || ''} onChange={handleInputChange} />
             ) : (
               <InfoItem label="Utilizador" value={asset?.utilizador} />
             )}
-            {/* Campo Categoria */}
             {isEditing ? (
               <Select
                 label="Categoria"
@@ -435,14 +425,12 @@ const AssetDetailScreen: React.FC<AssetDetailScreenProps> = (props) => {
                 name="category_id"
                 value={editFormData.category_id?.toString() || ''}
                 onChange={handleInputChange}
-                options={allCategoryOptions.filter(opt => opt.value !== 'addNew')} // Não mostra "Adicionar nova" ao editar
-                required
+                options={allCategoryOptions.filter(opt => opt.value !== 'addNew')} 
                 placeholder="Selecione uma categoria"
               />
             ) : (
               <InfoItem label="Categoria" value={assetCategoryName} />
             )}
-            {/* Campos somente para visualização (não editáveis nesta tela) */}
             <InfoItem label="ID (Interno/Externo)" value={asset?.id} />
             <InfoItem label="Número de Série" value={asset?.numero_serie} />
             <InfoItem label="Modelo" value={asset?.modelo} />

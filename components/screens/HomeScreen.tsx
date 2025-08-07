@@ -2,11 +2,11 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import Button from '../ui/Button';
 import Card from '../ui/Card';
-import { IconQrCode, IconList, IconAdd } from '../../constants.tsx'; // Import IconAdd
+import { IconQrCode, IconList, IconAdd } from '../../constants.tsx';
 import { ACCENT_COLOR_CLASS_TEXT } from '../../constants';
 
 interface HomeScreenProps {
-  onAddAsset: () => void; // Function to navigate to add asset screen
+  onAddAsset: () => void;
 }
 
 const HomeScreen: React.FC<HomeScreenProps> = ({ onAddAsset }) => {
@@ -19,7 +19,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onAddAsset }) => {
             Gerencie o patrimônio de forma simples e eficiente.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* New button to add a new asset */}
             <Button variant="primary" size="lg" fullWidth leftIcon={<IconAdd className="w-6 h-6" />} onClick={onAddAsset}>
               Adicionar Nova Máquina
             </Button>

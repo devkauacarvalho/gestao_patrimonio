@@ -1,4 +1,3 @@
-// types.ts
 export enum AssetStatus {
   EmOperacao = "Em Operação",
   EmManutencao = "Em Manutenção",

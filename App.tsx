@@ -1,4 +1,3 @@
-// App.tsx
 import React, { useState, useCallback, useEffect, JSX } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
 import { Asset, HistoryEntry, Category, User } from './types';

@@ -19,13 +19,13 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, errorMessage, clearE
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    clearError(); // Limpa erros anteriores ao tentar novamente
+    clearError(); 
     setIsSubmitting(true);
     const success = await onLogin(username, password);
     setIsSubmitting(false);
 
     if (success) {
-      navigate('/'); // Navega para a tela inicial após login bem-sucedido
+      navigate('/'); 
     }
   };
 

@@ -1,4 +1,3 @@
-// constants.ts
 import { Asset, AssetStatus, HistoryEventType } from './types';
 
 export const APP_NAME = "Make Gestão de Patrimônio";

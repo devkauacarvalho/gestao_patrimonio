@@ -7,7 +7,7 @@ interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
   error?: string;
   containerClassName?: string;
   options: { value: string; label: string }[];
-  placeholder?: string; // Added placeholder prop
+  placeholder?: string; 
 }
 
 const Select: React.FC<SelectProps> = ({ label, id, error, options, placeholder, containerClassName = '', className='', ...props }) => {

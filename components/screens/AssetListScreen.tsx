@@ -1,4 +1,3 @@
-// components/screens/AssetListScreen.tsx
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Asset, Category } from '../../types';
@@ -25,7 +24,6 @@ const AssetListScreen: React.FC<AssetListScreenProps> = ({ assets, categories })
   const filteredAssets = useMemo(() => {
     let currentFiltered = assets;
 
-    // 1. Filtrar pela barra de busca
     if (searchTerm) {
       currentFiltered = currentFiltered.filter(
         asset =>
@@ -38,7 +36,6 @@ const AssetListScreen: React.FC<AssetListScreenProps> = ({ assets, categories })
       );
     }
 
-    // 2. Filtrar pela categoria selecionada
     if (selectedCategoryId !== null) {
       currentFiltered = currentFiltered.filter(asset => asset.category_id === selectedCategoryId);
     }
@@ -61,7 +58,6 @@ const AssetListScreen: React.FC<AssetListScreenProps> = ({ assets, categories })
           <h2 className="text-xl font-semibold text-slate-700 mb-1">Lista de Máquinas</h2>
           <p className="text-sm text-slate-500">Total de máquinas: {assets.length}</p>
 
-          {/* Barra de Busca */}
           <div className="mt-4 relative mb-4">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <IconSearch className="text-slate-400" />
@@ -76,7 +72,6 @@ const AssetListScreen: React.FC<AssetListScreenProps> = ({ assets, categories })
             />
           </div>
 
-          {/* Category Filter Buttons */}
           <div className="flex flex-wrap gap-2 mb-4">
             <Button
               variant={selectedCategoryId === null ? "primary" : "secondary"}

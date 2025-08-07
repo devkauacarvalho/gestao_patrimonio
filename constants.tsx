@@ -1,4 +1,3 @@
-// constants.tsx
 import React from 'react';
 
 export const IconQrCode: React.FC<{ className?: string }> = ({ className = "w-6 h-6" }) => (

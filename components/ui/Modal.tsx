@@ -1,4 +1,3 @@
-// components/ui/Modal.tsx
 import React from 'react';
 import { IconClose } from '../../constants.tsx';
 
@@ -27,7 +26,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 
     >
       <div
         className={`bg-white rounded-lg shadow-xl p-6 w-full ${sizeClasses[size]} transform transition-all`}
-        onClick={(e) => e.stopPropagation()} // Impede que o clique dentro do modal o feche
+        onClick={(e) => e.stopPropagation()} 
       >
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold text-slate-800">{title}</h2>

@@ -1,7 +1,7 @@
 
 {
   "name": "Make Gestão de Patrimônio",
-  "description": "Aplicação móvel (PWA) para gestão de patrimônio (máquinas) da Make Distribuidora, utilizando leitura de QR code para acesso e atualização de informações e histórico.",
+  "description": "Aplicação móvel (PWA) para gestão de patrimônio (máquinas), utilizando leitura de QR code para acesso e atualização de informações e histórico.",
   "requestFramePermissions": [
     "camera"
   ]

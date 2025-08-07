@@ -1,4 +1,3 @@
-// backend/routes/auth.js
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
@@ -8,7 +7,6 @@ const router = express.Router();
 
 const JWT_SECRET = process.env.JWT_SECRET || "sua_chave_secreta_muito_forte_e_secreta";
 
-// Middleware para verificar o token JWT
 export const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
@@ -27,7 +25,6 @@ export const authenticateToken = (req, res, next) => {
   });
 };
 
-// Middleware para verificar se o usuário é 'admin'
 export const authorizeAdmin = (req, res, next) => {
   if (!req.user || req.user.role !== 'admin') {
     return res.status(403).json({ message: "Acesso negado. Requer privilégios de administrador." });
@@ -64,13 +61,11 @@ router.post('/users', authenticateToken, authorizeAdmin, async (req, res, next) 
   }
 
   try {
-    // Verificar se o nome de usuário já existe
     const existingUser = await db.query('SELECT id FROM users WHERE username = $1', [username]);
     if (existingUser.rows.length > 0) {
       return res.status(409).json({ message: "Nome de usuário já existe." });
     }
 
-    // Gerar hash da senha
     const saltRounds = 10;
     const passwordHash = await bcrypt.hash(password, saltRounds);
 
