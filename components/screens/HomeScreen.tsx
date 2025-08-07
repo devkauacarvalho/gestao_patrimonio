@@ -16,7 +16,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onAddAsset }) => {
         <div className="p-6">
           <h2 className={`text-2xl font-bold ${ACCENT_COLOR_CLASS_TEXT} mb-2`}>Bem-vindo!</h2>
           <p className="text-slate-600 mb-8">
-            Gerencie o patrimônio da Make Distribuidora de forma simples e eficiente.
+            Gerencie o patrimônio de forma simples e eficiente.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* New button to add a new asset */}
