@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom'; 
 import { IconClose } from '../../constants.tsx';
 
 interface ModalProps {
@@ -19,16 +20,16 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 
     xl: 'max-w-xl',
   };
 
-  return (
+  const modalContent = (
     <div
-      className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex justify-center items-center z-50 p-4 print-modal-container" // Adicionada a classe print-modal-container
+      className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex justify-center items-center z-50 p-4 print-modal-container"
       onClick={onClose}
     >
       <div
         className={`bg-white rounded-lg shadow-xl p-6 w-full ${sizeClasses[size]} transform transition-all`}
         onClick={(e) => e.stopPropagation()} 
       >
-        <div className="flex justify-between items-center mb-4">
+        <div className="flex justify-between items-center mb-4 hide-on-print">
           <h2 className="text-xl font-semibold text-slate-800">{title}</h2>
           <button
             onClick={onClose}
@@ -42,6 +43,8 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 };
 
 export default Modal;
