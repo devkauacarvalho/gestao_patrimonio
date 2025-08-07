@@ -407,7 +407,7 @@ const App: React.FC = () => {
         </Routes>
       </main>
       <footer className="text-center p-4 text-sm text-slate-500 border-t border-slate-200">
-        © {new Date().getFullYear()} Make Distribuidora. Todos os direitos reservados.
+        © {new Date().getFullYear()} Todos os direitos reservados.
       </footer>
     </div>
   );

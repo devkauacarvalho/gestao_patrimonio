@@ -4,7 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "concurrently \"npm:dev:frontend\" \"npm:dev:backend\"",
+    "dev:frontend": "vite",
+    "dev:backend": "node backend/server.js",
     "build": "vite build",
     "preview": "vite preview"
   },
@@ -27,6 +29,7 @@
     "@types/react": "^19.1.6",
     "@types/react-dom": "^19.1.5",
     "@vitejs/plugin-react": "^4.0.0",
+    "concurrently": "^9.2.0",
     "typescript": "~5.7.2",
     "vite": "^6.2.0"
   }
