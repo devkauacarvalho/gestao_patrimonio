@@ -12,7 +12,7 @@ import LoginScreen from './components/screens/LoginScreen';
 import AdminScreen from './components/screens/AdminScreen'; 
 import Button from './components/ui/Button';
 
-const API_BASE_URL = import.meta.env.PROD ? '/api' : 'http://localhost:3001';
+const API_BASE_URL = import.meta.env.PROD ? '' : 'http://localhost:3001';
 
 const App: React.FC = () => {
   const [assets, setAssets] = useState<Asset[]>([]);
