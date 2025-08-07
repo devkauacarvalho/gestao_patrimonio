@@ -5,10 +5,11 @@ const { Pool } = pg;
 
 const pool = new Pool({
   user: process.env.DB_USER || "neondb_owner", 
-  host: process.env.DB_HOST || "localhost", 
-  database: process.env.DB_DATABASE || "asset_management", 
+  host: process.env.DB_HOST || "ep-rapid-hat-ac6u3nce-pooler.sa-east-1.aws.neon.tech", 
+  database: process.env.DB_DATABASE || "neondb", 
   password: process.env.DB_PASSWORD || "npg_DtSQwLN6Y8Tp",
   port: parseInt(process.env.DB_PORT || "5432"), 
+  ssl: true,
 });
 
 pool.connect((err, client, release) => {
