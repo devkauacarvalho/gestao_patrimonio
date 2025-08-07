@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-// Importar o componente Scanner da biblioteca
 import { Scanner } from '@yudiel/react-qr-scanner';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
 import Card from '../ui/Card';
-import { IconQrCode, IconBack, IconCameraOff } from '../../constants.tsx'; // Pode precisar adicionar IconCameraOff
+import { IconQrCode, IconBack, IconCameraOff } from '../../constants.tsx';
 
 interface ScanScreenProps {
   onScan: (id: string) => void;
@@ -13,12 +12,9 @@ interface ScanScreenProps {
 
 const ScanScreen: React.FC<ScanScreenProps> = ({ onScan }) => {
   const navigate = useNavigate();
-  // Estado para o ID inserido manualmente
   const [assetId, setAssetId] = useState('');
-  // Estado para mensagens de erro do scanner
   const [scannerErrorMessage, setScannerErrorMessage] = useState<string | null>(null);
 
-  // Função para submeter o ID manual
   const handleSubmitManual = (e: React.FormEvent) => {
     e.preventDefault();
     if (assetId.trim()) {
@@ -26,15 +22,11 @@ const ScanScreen: React.FC<ScanScreenProps> = ({ onScan }) => {
     }
   };
 
-  // Função chamada quando um QR code é lido com sucesso pelo scanner
   const handleDecodeScanner = (result: string) => {
     console.log('QR Code lido:', result);
-    // Chama a função onScan passada por App.tsx com o ID lido
-    // Poderia adicionar um feedback visual antes de chamar onScan
     onScan(result);
   };
 
-  // Função chamada se ocorrer um erro ao aceder à câmara
   const handleErrorScanner = (error: any) => {
     console.error('Erro ao aceder à câmara:', error);
     let message = 'Ocorreu um erro ao tentar aceder à câmara.';
@@ -59,7 +51,6 @@ const ScanScreen: React.FC<ScanScreenProps> = ({ onScan }) => {
           Voltar
       </Button>
       <Card title="Identificar Máquina">
-        {/* Secção para Entrada Manual */}
         <form onSubmit={handleSubmitManual} className="mb-6 pb-6 border-b border-slate-200">
           <p className="text-sm text-slate-600 mb-3">
             Insira o ID da máquina manualmente:
@@ -77,26 +68,23 @@ const ScanScreen: React.FC<ScanScreenProps> = ({ onScan }) => {
           </Button>
         </form>
 
-        {/* Secção para Leitura de QR Code */}
         <div>
           <p className="text-sm text-slate-600 mb-4 text-center">
             Ou aponte a câmara para o QR code:
           </p>
           {scannerErrorMessage ? (
-            // Exibe mensagem de erro se houver problemas com a câmara
             <div className="p-4 mb-4 text-sm text-red-700 bg-red-100 rounded-lg border border-red-300 flex items-center">
               <IconCameraOff className="w-5 h-5 mr-2" /> 
               {scannerErrorMessage}
             </div>
           ) : (
-            // Exibe o componente Scanner se não houver erro
             <div className="relative w-full aspect-square overflow-hidden rounded-md border border-slate-300 mb-4 bg-slate-100">
               <Scanner
                 onScan={(result) => handleDecodeScanner(result[0].rawValue)}
                 onError={handleErrorScanner}
                 components={{ onOff: false, torch: false, zoom: false }}
                 styles={{
-                  container: { width: '100%', height: '100%', paddingTop: '0' }, // Ajuste paddingTop se necessário
+                  container: { width: '100%', height: '100%', paddingTop: '0' },
                   video: { objectFit: 'cover' },
                 }}
               />
@@ -104,7 +92,6 @@ const ScanScreen: React.FC<ScanScreenProps> = ({ onScan }) => {
           )}
         </div>
 
-        {/* Nota sobre permissões e HTTPS */}
         <div className="mt-6 p-3 bg-blue-50 border border-blue-200 rounded-md text-sm text-blue-700">
             <p><strong>Nota:</strong> O acesso à câmara para leitura de QR Code requer permissão e geralmente funciona apenas em conexões seguras (HTTPS) ou localhost.</p>
         </div>

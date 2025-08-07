@@ -1,10 +1,9 @@
-// components/screens/LoginScreen.tsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Card from '../ui/Card';
 import Input from '../ui/Input';
 import Button from '../ui/Button';
-import { IconLogin } from '../../constants.tsx'; // Precisaremos adicionar IconLogin
+import { IconLogin } from '../../constants.tsx';
 
 interface LoginScreenProps {
   onLogin: (username: string, password: string) => Promise<boolean>;
@@ -42,7 +41,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, errorMessage, clearE
         )}
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input
-            label="Usuário"
+            label="Usuário (padrão: admin)"
             id="username"
             type="text"
             value={username}
@@ -51,7 +50,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, errorMessage, clearE
             disabled={isSubmitting}
           />
           <Input
-            label="Senha"
+            label="Senha (padrão: admin)"
             id="password"
             type="password"
             value={password}
