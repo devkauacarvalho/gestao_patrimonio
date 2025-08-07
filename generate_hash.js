@@ -1,6 +1,6 @@
-import bcrypt from 'bcrypt';
-const plaintextPassword = 'Make784512';
-const saltRounds = 10; // Um valor recomendado para segurança
+import bcrypt from 'bcryptjs';
+const plaintextPassword = 'admin';
+const saltRounds = 10; 
 
 bcrypt.hash(plaintextPassword, saltRounds, function(err, hash) {
     if (err) {

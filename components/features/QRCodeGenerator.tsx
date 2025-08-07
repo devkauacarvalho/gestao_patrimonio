@@ -1,13 +1,13 @@
 import React from 'react';
-import { QRCodeSVG } from 'qrcode.react'; // Importa o componente QRCodeSVG
+import { QRCodeSVG } from 'qrcode.react'; 
 
 interface QRCodeGeneratorProps {
-  value: string; // O valor a ser codificado no QR Code (o ID do ativo)
-  size?: number; // Tamanho do QR Code em pixels (padrão: 128)
-  level?: 'L' | 'M' | 'Q' | 'H'; // Nível de correção de erro (padrão: 'M')
-  fgColor?: string; // Cor do primeiro plano (quadrados)
-  bgColor?: string; // Cor do fundo
-  className?: string; // Classes CSS adicionais para o container
+  value: string; 
+  size?: number; 
+  level?: 'L' | 'M' | 'Q' | 'H'; 
+  fgColor?: string; 
+  bgColor?: string; 
+  className?: string; 
 }
 
 const QRCodeGenerator: React.FC<QRCodeGeneratorProps> = ({

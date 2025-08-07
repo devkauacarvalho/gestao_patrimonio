@@ -2,7 +2,7 @@
 import { Asset, AssetStatus, HistoryEventType } from './types';
 
 export const APP_NAME = "Make Gestão de Patrimônio";
-export const ACCENT_COLOR_NAME = "teal"; // Tailwind color name
+export const ACCENT_COLOR_NAME = "teal";
 export const ACCENT_COLOR_CLASS_BG = `bg-${ACCENT_COLOR_NAME}-600`;
 export const ACCENT_COLOR_CLASS_TEXT = `text-${ACCENT_COLOR_NAME}-600`;
 export const ACCENT_COLOR_CLASS_BORDER = `border-${ACCENT_COLOR_NAME}-600`;
@@ -14,7 +14,6 @@ export const HISTORY_EVENT_TYPE_OPTIONS: HistoryEventType[] = Object.values(Hist
 export const INITIAL_ASSETS: Asset[] = [
   {
     id: "MAKEDIST-MAQ-00123",
-    // id_interno: "MAKEDIST-MAQ-00123", // REMOVIDO
     nome: "Empacotadora Automática XPTO",
     numero_serie: "SN-XPTO-12345",
     modelo: "XPTO-2023",
@@ -31,7 +30,6 @@ export const INITIAL_ASSETS: Asset[] = [
   },
   {
     id: "MAKEDIST-MAQ-00456",
-    // id_interno: "MAKEDIST-MAQ-00456", // REMOVIDO
     nome: "Prensa Hidráulica YZ",
     numero_serie: "SN-YZ-67890",
     modelo: "YZ-HEAVY-2022",
@@ -48,7 +46,6 @@ export const INITIAL_ASSETS: Asset[] = [
   },
   {
     id: "MAKEDIST-MAQ-00789",
-    // id_interno: "MAKEDIST-MAQ-00789", // REMOVIDO
     nome: "Esteira Transportadora ZW",
     numero_serie: "SN-ZW-11223",
     modelo: "ZW-FAST-2024",

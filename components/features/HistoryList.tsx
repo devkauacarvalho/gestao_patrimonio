@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { HistoryEntry } from '../../types';
-import { IconTime } from '../../constants.tsx'; // Assuming you have an IconTime
+import { IconTime } from '../../constants.tsx'; 
 
 interface HistoryListProps {
   history: HistoryEntry[];

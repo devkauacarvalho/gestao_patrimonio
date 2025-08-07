@@ -20,20 +20,20 @@ export interface HistoryEntry {
   tipo_evento: HistoryEventType;
   descricao: string;
   responsavel?: string;
-  user_id?: number; // NOVO: ID do usuário que fez a alteração
+  user_id?: number;
 }
 
 export interface Category {
   id: number;
   name: string;
   prefix: string;
-  sequence_name?: string; // NOVO: Nome da sequência para geração de ID
+  sequence_name?: string;
 }
 
-export interface User { // NOVA INTERFACE: Para dados do usuário logado
+export interface User {
   id: number;
   username: string;
-  role: string; // Ex: 'admin', 'user'
+  role: string;
 }
 
 export interface Asset {

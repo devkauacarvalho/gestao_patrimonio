@@ -9,7 +9,7 @@ import ScanScreen from './components/screens/ScanScreen';
 import AssetListScreen from './components/screens/AssetListScreen';
 import AssetDetailScreen from './components/screens/AssetDetailScreen';
 import LoginScreen from './components/screens/LoginScreen';
-import AdminScreen from './components/screens/AdminScreen'; // Importa a tela Admin
+import AdminScreen from './components/screens/AdminScreen'; 
 import Button from './components/ui/Button';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
@@ -24,7 +24,6 @@ const App: React.FC = () => {
 
   const navigate = useNavigate();
 
-  // Função para buscar ativos
   const fetchAssets = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -44,7 +43,6 @@ const App: React.FC = () => {
     }
   }, []);
 
-  // Função para buscar categorias
   const fetchCategories = useCallback(async () => {
     setError(null);
     try {
@@ -61,7 +59,6 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    // Tentar carregar o token e o usuário do localStorage ao iniciar
     const storedToken = localStorage.getItem('accessToken');
     const storedUser = localStorage.getItem('currentUser');
     if (storedToken && storedUser) {
@@ -81,7 +78,6 @@ const App: React.FC = () => {
     }
   };
 
-  // Função para fazer login
   const handleLogin = useCallback(async (username: string, password: string): Promise<boolean> => {
     setAuthError(null);
     try {
@@ -111,7 +107,6 @@ const App: React.FC = () => {
     }
   }, []);
 
-  // Função para fazer logout
   const handleLogout = useCallback(() => {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('currentUser');
@@ -119,8 +114,6 @@ const App: React.FC = () => {
     navigate('/login');
   }, [navigate]);
 
-  // Helper para obter headers de autorização
-  // CORRIGIDO: Adicionado o tipo de retorno explícito para resolver o erro do TypeScript.
   const getAuthHeaders = useCallback((): Record<string, string> => {
     const token = localStorage.getItem('accessToken');
     if (token) {
@@ -303,7 +296,6 @@ const App: React.FC = () => {
     return <div className="flex justify-center items-center min-h-screen">Carregando...</div>;
   }
 
-  // Componente privado que requer autenticação
   const PrivateRoute = ({ children, roles }: { children: JSX.Element; roles?: string[] }) => {
     if (!currentUser) {
       useEffect(() => {

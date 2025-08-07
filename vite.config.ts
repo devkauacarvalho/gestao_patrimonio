@@ -10,7 +10,6 @@ export default defineConfig({
   ],
   server: {
     host: true,
-    // Remova o bloco HTTPS ou comente-o para desativar o HTTPS para desenvolvimento
     // https: {
     //   key: fs.readFileSync(path.resolve(__dirname, './localhost+1-key.pem')),
     //   cert: fs.readFileSync(path.resolve(__dirname, './localhost+1.pem'))
